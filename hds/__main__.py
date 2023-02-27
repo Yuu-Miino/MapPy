@@ -1,8 +1,8 @@
 import numpy
 from .__classes__ import Mode, ContinuousMode, DiscreteMode
 
-class FirstReturnMapResult:
-    """Result of `first_return_map`
+class SolveIvbmpResult:
+    """Result of `solve_ivbmp`
 
     Parameters
     ----------
@@ -24,22 +24,25 @@ class SomeJacUndefined(Exception):
     def __str__(self) -> str:
         return "Some mode does not implement Jacobian matrix calculation."
 
-def first_return_map(
+def solve_ivbmp(
     y0: numpy.ndarray | float,
     initial_mode: Mode,
+    end_mode: Mode | None = None,
     calc_jac: bool = True,
     args = None,
     rtol=1e-6,
     map_count=1
-) -> FirstReturnMapResult:
-    """First return map
+) -> SolveIvbmpResult:
+    """Solve the initial value and boundary **modes** problem of the hybrid dynamical system
 
     Parameters
     ----------
     y0 : numpy.ndarray or float
-        The initial state y0.
+        The initial value y0.
     initial_mode : Mode
-        The initial mode. It also plays the role of Poincaré section.
+        The initial mode. It also plays the role of Poincaré section since the function solves the boundary modes problem.
+    end_mode: Mode or None, optional
+        The end mode, by default `None`. If `None`, the end mode in the method is the same as `initial_mode`.
     calc_jac : bool, optional
         Flag to calculate the Jacobian matrix, by default `True`.
     args : Any, optional
@@ -51,7 +54,7 @@ def first_return_map(
 
     Returns
     -------
-    FirstReturnMapResult
+    SolveIvbmpResult
 
     Raises
     ------
@@ -60,7 +63,8 @@ def first_return_map(
     """
     result = None
     current_mode = initial_mode
-    finish_mode = initial_mode
+    if end_mode is None:
+        end_mode = initial_mode
     jac = None
     count = 0
 
@@ -86,7 +90,7 @@ def first_return_map(
             else:
                 pass
             count += 1
-            if current_mode == finish_mode:
+            if current_mode == end_mode:
                 break
 
-    return FirstReturnMapResult(y0, float(jac) if jac is not None and jac.size == 1 else jac)
+    return SolveIvbmpResult(y0, float(jac) if jac is not None and jac.size == 1 else jac)

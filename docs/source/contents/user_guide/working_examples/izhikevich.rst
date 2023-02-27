@@ -102,7 +102,7 @@ Run
     param = Parameter()
 
     # Run from `mode0` to `mode0`
-    result = first_return_map(y0=y0, initial_mode=mode0, args=param)
+    result = solve_ivbmp(y0=y0, initial_mode=mode0, args=param)
 
     print(result)
     # {'y': array([-50.        ,  -1.70979509]), 'jac': None}

@@ -9,7 +9,7 @@ Import the following modules.
 .. code-block:: python
 
     import numpy as np
-    from hds import ContinousMode as CM, DiscreteMode as DM, first_return_map
+    from hds import ContinousMode as CM, DiscreteMode as DM, solve_ivbmp
 
 
 .. toctree::

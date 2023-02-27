@@ -1,9 +1,9 @@
 from .__classes__ import ContinuousMode, DiscreteMode, ModeStepResult, Mode, DictVector
-from .__main__ import first_return_map, FirstReturnMapResult
+from .__main__ import solve_ivbmp, SolveIvbmpResult
 
 __all__ = [
-    "first_return_map",
-    "FirstReturnMapResult",
+    "solve_ivbmp",
+    "SolveIvbmpResult",
     "ContinuousMode",
     "DiscreteMode",
     "ModeStepResult",
