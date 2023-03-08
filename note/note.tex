@@ -1,5 +1,5 @@
 \documentclass[a4paper]{article}
-\usepackage[left=25mm, right=25mm]{geometry}
+\usepackage[left=20mm, right=20mm]{geometry}
 
 \usepackage{newtxtext, newtxmath}
 \usepackage{bm}
@@ -211,7 +211,7 @@ The Hessian tensor of $T_0$ is
     \hes_{T_0}
     =
     \parens{
-        \pderiv{B}{\bm x} (\bm x_1) \jac_{T_0}
+        \pderiv{B}{\bm x} (\bm x_1) \pderiv{\traj}{\bm x_0}(\tau)
     }
     \pderiv{\traj}{\bm x_0}(\tau)
     +
@@ -243,7 +243,7 @@ where
 since
 \begin{align}
     \begin{aligned}
-        B &\in X \otimes X^* &
+        B &\in X \otimes X^* ,&
         \pderiv{B}{\bm x} &\in X \otimes X^* \otimes X^*,\\
         \deriv{q}{\bm x}&\in X^*, &
         \deriv[2]{q}{\bm x} & \in X^* \otimes X^*,\\
@@ -280,6 +280,174 @@ where
         \tr_{23} \parens{
             \deriv{\bm f}{\bm x} \otimes \pderiv[2]{\traj}{\bm x_0}
         }.
+    \end{aligned}
+\end{align}
+
+\clearpage
+\begin{align}
+    &\begin{aligned}
+        \pderiv{T_0}{\bm x_0}
+        &= \pderiv{\traj}{\bm x_0}
+        + \bm f(\bm x_1) \pderiv{\tau}{\bm x_0}
+        \\
+        \pderiv{\tau}{\bm x_0}
+        &=
+        - \frac{1}{\deriv{q}{\bm x} \bm f(\bm x_1)} \deriv{q}{\bm x} \pderiv{\traj}{\bm x_0}
+        \\
+        \pderiv{T_0}{\bm x_0}
+        &=
+        \brackets{
+            I - \frac{1}{\deriv{q}{\bm x} \bm f(\bm x_1)} \bm f(\bm x_1) \deriv{q}{\bm x}
+        } \pderiv{\traj}{\bm x_0}
+        = B(\bm x_1) \pderiv{\traj}{\bm x_0}
+    \end{aligned}
+    \\[20pt]
+    &\begin{aligned}
+        \pderiv[2]{T_0}{\bm x_0} &=
+        \pderiv[2]{\traj}{\bm x_0}
+        +
+        \parens{
+            \deriv{\bm f}{\bm x}
+            \pderiv{\traj}{\bm x_0}
+        } \otimes
+        \pderiv{\tau}{\bm x_0}
+        +
+        \bm f(\bm x_1) \otimes
+        \pderiv[2]{\tau}{\bm x_0}
+        \\
+        \pderiv[2]{\tau}{\bm x_0} &=
+        - \frac{1}{
+            \parens{\deriv{q}{\bm x}\bm f(\bm x_1)}^2
+        }
+        \brackets{
+            \pderiv{}{\bm x_0}\parens{\deriv{q}{\bm x}\pderiv{\traj}{\bm x_0}}
+            \deriv{q}{\bm x} \bm f(\bm x_1)
+            -
+            \parens{\deriv{q}{\bm x}\pderiv{\traj}{\bm x_0}} \otimes
+            \pderiv{}{\bm x_0}\parens{
+                \deriv{q}{\bm x} \bm f(\bm x_1)
+            }
+        }
+        \\
+        &=
+        - \frac{1}{
+            \parens{\deriv{q}{\bm x}\bm f(\bm x_1)}^2
+        }
+        \braces{
+            \brackets{
+            \parens{\deriv[2]{q}{\bm x}\pderiv{\traj}{\bm x_0}}
+            \pderiv{\traj}{\bm x_0}
+            +
+            \deriv{q}{\bm x}\pderiv[2]{\traj}{\bm x_0}
+            }
+            \deriv{q}{\bm x} \bm f(\bm x_1)
+            -
+            \parens{\deriv{q}{\bm x}\pderiv{\traj}{\bm x_0}}\otimes
+            \brackets{
+                \parens{
+                    \deriv[2]{q}{\bm x}\pderiv{\traj}{\bm x_0}
+                }
+                \bm f(\bm x_1)
+                +
+                \deriv{q}{\bm x}
+                \parens{\deriv{\bm f}{\bm x} \pderiv{\traj}{\bm x_0}}
+            }
+        }
+        \\
+        &=
+        - \frac{1}{
+            {\deriv{q}{\bm x}\bm f(\bm x_1)}
+        }
+        \brackets{
+            \parens{\deriv[2]{q}{\bm x}\pderiv{\traj}{\bm x_0}}
+            \pderiv{\traj}{\bm x_0}
+            +
+            \deriv{q}{\bm x}\pderiv[2]{\traj}{\bm x_0}
+            }
+        + \frac{1}{
+            \parens{\deriv{q}{\bm x}\bm f(\bm x_1)}^2
+        }
+        \parens{\deriv{q}{\bm x}\pderiv{\traj}{\bm x_0}}\otimes
+        \brackets{
+            \parens{
+                \deriv[2]{q}{\bm x}\pderiv{\traj}{\bm x_0}
+            }
+            \bm f(\bm x_1)
+            +
+            \deriv{q}{\bm x}
+            \parens{\deriv{\bm f}{\bm x} \pderiv{\traj}{\bm x_0}}
+        }
+        \\
+        \pderiv[2]{T_0}{\bm x_0}
+        &= B(\bm x_1) \pderiv[2]{\traj}{\bm x_0}
+        - \frac{1}{\deriv{q}{\bm x} \bm f(\bm x_1)}
+        \brackets{
+            \parens{
+                \deriv{\bm f}{\bm x}
+                \pderiv{\traj}{\bm x_0}
+            }
+            \otimes \deriv{q}{\bm x}
+            +
+            \bm f(\bm x_1) \otimes \parens{\deriv[2]{q}{\bm x}\pderiv{\traj}{\bm x_0}}
+        } \pderiv{\traj}{\bm x_0}
+        \\
+        &\qquad
+        + \frac{1}{
+            \parens{\deriv{q}{\bm x}\bm f(\bm x_1)}^2
+        } \bm f(\bm x_1) \otimes
+        \parens{\deriv{q}{\bm x}\pderiv{\traj}{\bm x_0}}\otimes
+        \brackets{
+            \parens{
+                \deriv[2]{q}{\bm x}\pderiv{\traj}{\bm x_0}
+            }
+            \bm f(\bm x_1)
+            +
+            \deriv{q}{\bm x}
+            \parens{\deriv{\bm f}{\bm x} \pderiv{\traj}{\bm x_0}}
+        }
+        \\
+        &= B(\bm x_1) \pderiv[2]{\traj}{\bm x_0}
+        - \frac{1}{\deriv{q}{\bm x} \bm f(\bm x_1)}
+        \brackets{\parens{
+            \deriv{\bm f}{\bm x}
+            \otimes \deriv{q}{\bm x}
+            +
+            \bm f(\bm x_1) \otimes \deriv[2]{q}{\bm x}
+        }\pderiv{\traj}{\bm x_0}}  \pderiv{\traj}{\bm x_0}
+        \\
+        &\qquad
+        + \frac{1}{
+            \parens{\deriv{q}{\bm x}\bm f(\bm x_1)}^2
+        }
+        \parens{\bm f(\bm x_1) \deriv{q}{\bm x}}\otimes
+        \brackets{\parens{
+            \deriv[2]{q}{\bm x} \bm f(\bm x_1)
+            +
+            \deriv{q}{\bm x} \deriv{\bm f}{\bm x}
+        }\pderiv{\traj}{\bm x_0}} \pderiv{\traj}{\bm x_0}
+        \\
+        &= B(\bm x_1) \pderiv[2]{\traj}{\bm x_0}
+        \\
+        &\quad
+        - \frac{1}{\parens{\deriv{q}{\bm x} \bm f(\bm x_1)}^2}
+        \braces{\brackets{\parens{
+            \deriv{\bm f}{\bm x}
+            \otimes \deriv{q}{\bm x}
+            +
+            \bm f(\bm x_1) \otimes \deriv[2]{q}{\bm x}
+        }
+        \deriv{q}{\bm x} \bm f(\bm x_1)
+        -
+        \parens{\bm f(\bm x_1) \deriv{q}{\bm x}}\otimes
+        \parens{
+            \deriv[2]{q}{\bm x} \bm f(\bm x_1)
+            +
+            \deriv{q}{\bm x} \deriv{\bm f}{\bm x}
+        }}\pderiv{\traj}{\bm x_0}} \pderiv{\traj}{\bm x_0}
+        \\
+        &=
+        B(\bm x_1) \pderiv[2]{\traj}{\bm x_0} +
+        \parens{\deriv{B}{\bm x} \pderiv{\traj}{\bm x_0}} \pderiv{\traj}{\bm x_0}
     \end{aligned}
 \end{align}
 

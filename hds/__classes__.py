@@ -364,33 +364,45 @@ class ContinuousMode (Mode):
         y1  = sol.y.T[-1][0:dim] if dim != 1 else sol.y.T[-1][0]
 
         if self.jac_fun is not None: # If calculate Jacobian matrix
-            jact = sol.y.T[-1][dim:dim+(dim**2)].reshape((dim, dim), order='F')
+            jact = numpy.array(sol.y.T[-1][dim:dim+(dim**2)]).reshape((dim, dim), order='F')
             jac  = jact.copy()
         else:
             jact = None
             jac = None
 
         if self.hes_fun is not None:
-            hest = sol.y.T[-1][dim+(dim**2):dim+(dim**2)+(dim**3)].reshape((dim, dim, dim)).transpose(0, 2, 1)
+            hest = numpy.array(sol.y.T[-1][dim+(dim**2):dim+(dim**2)+(dim**3)]).reshape((dim, dim, dim)).transpose(0, 2, 1)
             hes  = hest.copy()
         else:
             hest = None
             hes = None
+        print('jact\n', jact)
+        print('hest\n', hest)
+        print('tau\n', sol.t[-1])
 
         # border detect
         if sol.status == 1:
             # For each borders
             for i, ev in enumerate(self.borders):
                 if len(sol.t_events[i]) != 0:
-                    if self.jac_fun is not None:
+                    if jact is not None:
                         dydt = ode_fun(0, y1)
                         dbdy = devs[i](0, y1)
                         B = (numpy.eye(dim) - 1.0/numpy.dot(dbdy, dydt) * numpy.outer(dydt, dbdy))
                         jac = B @ jact
 
-                        if self.hes_fun is not None:
+                        """ dydtx = ode_fun(0, y1+numpy.array([1e-5, 0]))
+                        dbdyx = devs[i](0, y1+numpy.array([1e-5, 0]))
+                        Bx = (numpy.eye(dim) - 1.0/numpy.dot(dbdyx, dydtx) * numpy.outer(dydtx, dbdyx))
+
+                        dydty = ode_fun(0, y1+numpy.array([0, 1e-5]))
+                        dbdyy = devs[i](0, y1+numpy.array([0, 1e-5]))
+                        By = (numpy.eye(dim) - 1.0/numpy.dot(dbdyy, dydty) * numpy.outer(dydty, dbdyy)) """
+
+                        if hest is not None:
                             dfdy = jac_fun(0, y1)
                             d2bdy2 = d2evs[i](0, y1)
+                            print('dfdy', dfdy)
                             """ print('Y, Y* x Y* -> Y, Y*, Y* :',
                                 dfdy.shape,
                                 dbdy.shape,
@@ -454,16 +466,24 @@ class ContinuousMode (Mode):
                             # hes = (dBdy @ jac) @ jact + B @ hest
                             hes = (
                                 numpy.trace(numpy.tensordot(
-                                    numpy.trace(numpy.tensordot(dBdy, jac, axes=0), axis1=0, axis2=3).transpose(2, 0, 1), jact, axes=0
+                                    numpy.trace(numpy.tensordot(dBdy, jact, axes=0), axis1=0, axis2=3).transpose(2, 0, 1), jact, axes=0
                                 ), axis1=2, axis2=3)
                                 +
                                 numpy.trace(numpy.tensordot(B, hest, axes=0), axis1=1, axis2=3).transpose(2, 0, 1)
                             )
                             print('dBdy=\n', dBdy)
+                            """ print('(Bx-B)/eps\n', (Bx-B) / 1e-5)
+                            print('(By-B)/eps\n', (By-B) / 1e-5) """
                             print('jact=\n', jact)
                             print('jac=\n', jac)
                             print('B=\n', B)
                             print('hest=\n', hest)
+                            print('dBdy @ jact\n',
+                                numpy.trace(numpy.tensordot(dBdy, jact, axes=0), axis1=0, axis2=3).transpose(2, 0, 1))
+                            print('(dBdy @ jact) @ jact\n', numpy.trace(numpy.tensordot(
+                                    numpy.trace(numpy.tensordot(dBdy, jact, axes=0), axis1=0, axis2=3).transpose(2, 0, 1), jact, axes=0
+                                ), axis1=2, axis2=3))
+                            print('B@hest\n', numpy.trace(numpy.tensordot(B, hest, axes=0), axis1=1, axis2=3).transpose(2, 0, 1))
                             print('hes=(dBdy @ jact) @ jact + B @ hest\n', hes)
                     i_border = i
 
