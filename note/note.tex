@@ -261,7 +261,9 @@ On the other hand,
     &= \deriv{\bm f}{\bm x} \pderiv{\traj}{\bm x_0}\\
     \deriv{}{t}
     \parens{\pderiv[2]{\traj}{\bm x_0}}
-    &= \deriv[2]{\bm f}{\bm x} \pderiv{\traj}{\bm x_0}
+    &=
+    \parens{\deriv[2]{\bm f}{\bm x} \pderiv{\traj}{\bm x_0}}
+    \pderiv{\traj}{\bm x_0}
     +
     \deriv{\bm f}{\bm x} \pderiv[2]{\traj}{\bm x_0},
 \end{align}

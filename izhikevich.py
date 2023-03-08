@@ -104,10 +104,11 @@ def main ():
     mode3.next = mode0
 
     result1 = solve_ivbmp(y0, mode0, end_mode=mode2, args=param, calc_hes=True)
-    result2 = solve_ivbmp(y0+1e-5, mode0, end_mode=mode2, args=param, calc_hes=True)
+    print("=================")
+    result2 = solve_ivbmp(y0+1e-7, mode0, end_mode=mode2, args=param, calc_hes=True)
 
     print(result1, '\n', result2)
-    print((result2.jac-result1.jac)/1e-5)
+    print('hes(n)\n', (result2.jac-result1.jac)/1e-7)
 
 if __name__=="__main__":
     main()

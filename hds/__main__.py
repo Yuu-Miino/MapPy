@@ -84,10 +84,10 @@ def solve_ivbmp(
 
     for _ in range(map_count):
         while 1:
-            if isinstance(current_mode, DiscreteMode):
+            """ if isinstance(current_mode, DiscreteMode):
                 print(f"> ==\nWANT: {current_mode.fun.cod_dim, 1, 1}")
             else:
-                print(f"> ==\nWANT: {current_mode.fun.dom_dim, 1, 1}")
+                print(f"> ==\nWANT: {current_mode.fun.dom_dim, 1, 1}") """
 
             result = current_mode.step(y0, args=[args], rtol=rtol)
             y0 = result.y
@@ -104,14 +104,14 @@ def solve_ivbmp(
 
                             hesn = result.hes
 
-                            print('A:', (hesn@jac).shape, jac.shape, '->', numpy.trace(
+                            """ print('A:', (hesn@jac).shape, jac.shape, '->', numpy.trace(
                                 numpy.tensordot(hesn @ jac, jac, axes=0),
                                 axis1= 1, axis2= 3
                             ).shape)
                             print('B:', jacn.shape, hes.shape, '->', (numpy.trace(
                                 numpy.tensordot(jacn, hes, axes=0),
                                 axis1= 1, axis2= 2
-                            )).shape)
+                            )).shape) """
 
                             hes = numpy.trace(
                                 numpy.tensordot(hesn @ jac, jac, axes=0),
@@ -120,7 +120,7 @@ def solve_ivbmp(
                                 numpy.tensordot(numpy.array(jacn), numpy.array(hes), axes=0),
                                 axis1= 1, axis2= 2
                             )
-                            print("< ==")
+                            """ print("< ==") """
                         else:
                             raise SomeHesUndefined
                     jac = jacn @ jac
