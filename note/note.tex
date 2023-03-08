@@ -1,0 +1,284 @@
+\documentclass[a4paper]{article}
+\usepackage[left=25mm, right=25mm]{geometry}
+
+\usepackage{newtxtext, newtxmath}
+\usepackage{bm}
+\usepackage{amsmath}
+\usepackage{ifthen}
+\usepackage{xcolor}
+
+\title{Fundamentals on the package}
+\author{Yuu Miino}
+\date{\today}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\deriv}[3][1]{%
+    \ifthenelse{\equal{#1}{1}}{\frac{d #2}{d #3}}{\frac{d^#1 #2}{{d #3}^#1}}
+}
+\newcommand{\pderiv}[3][1]{%
+    \ifthenelse{\equal{#1}{1}}{\frac{\partial #2}{\partial #3}}{\frac{\partial^#1 #2}{{\partial #3}^#1}}
+}
+\newcommand{\jac}{J}
+\newcommand{\hes}{H}
+\newcommand{\parens}[1]{\left(#1\right)}
+\newcommand{\tr}{\mathop{\mathrm{tr}}\nolimits}
+\newcommand{\braces}[1]{\left\{#1\right\}}
+\newcommand{\set}[1]{\braces{#1}}
+\newcommand{\parm}{\partial\!M}
+\newcommand{\brackets}[1]{\left[#1\right]}
+\newcommand{\traj}{\bm \varphi}
+\newcommand{\red}[1]{\textcolor{red}{#1}}
+
+\begin{document}
+\maketitle
+\section{Derivatives of the composite map}
+Let $V$, $W$, and $X$ be vector spaces over $\R$,
+and $f$ and $g$ be diffeomorphisms defined by
+\begin{align}
+    \begin{aligned}
+        f&: V \to W, &
+        g&: W \to X.
+    \end{aligned}
+\end{align}
+Then, the Jacobian matrix of $f$ and $g$ are elements of tensor products
+\begin{align}
+    \begin{aligned}
+        \jac_f &\in W \otimes V^*, &
+        \jac_g &\in X \otimes W^*,
+    \end{aligned}
+\end{align}
+where $V^*$ and $W^*$ are the dual spaces of $V$ and $W$, respectively.
+$\jac_f$ is also a map $V \to W$; $\jac_g$ is $W \to X$.
+If $\jac_f$ and $\jac_g$ are differentiable in $V$ and $W$,
+the Hessian tensors $\hes_f$ and $\hes_g$ are available as elements of another tensor products
+\begin{align}
+    \begin{aligned}
+        \hes_f &\in W \otimes V^* \otimes V^*, &
+        \hes_g &\in X \otimes W^* \otimes W^*.
+    \end{aligned}
+\end{align}
+On the other hand, a composite map $g\circ f$ is described as
+\begin{align}
+    g \circ f: V \to X.
+\end{align}
+From the chain-rule, the Jacobian matrix of $g\circ f$ is
+\begin{align}
+    \jac_{g\circ f} = \jac_g \jac_f \in X \otimes V^*.
+    \label{eq:jacgf}
+\end{align}
+In the context of the tensor, Eq. (\ref{eq:jacgf}) is equivalent to
+the following contraction of the tensor product.
+\begin{align}
+    \jac_{g\circ f} = \tr_{23} \parens{
+        \jac_g \otimes \jac_f
+    },
+\end{align}
+where
+\begin{align}
+    \begin{aligned}
+        \jac_g \otimes \jac_f &\in \parens{X \otimes W^*} \otimes \parens{W \otimes V^*}, \\
+        \tr_{23} & : \parens{X \otimes W^*} \otimes \parens{W \otimes V^*} \to
+        X \otimes V^*.
+    \end{aligned}
+\end{align}
+We write the $(i, j)$ contraction of a tensor by $\tr_{ij}$,
+which is a generalization of the trace.
+The Hessian tensor of $g\circ f$ is an element of
+$X \otimes V^* \otimes V^*$.
+From the chain-rule, we have
+\begin{align}
+    \hes_{g\circ f} =
+    \parens{\hes_g \jac_f} \jac_f +
+    \jac_g \hes_f,
+\end{align}
+where
+\begin{align}
+    \begin{aligned}
+        \hes_g \jac_f & = \tr_{24}\parens{\hes_g \otimes \jac_f}
+        \quad\parens{= \tr_{34}\parens{\hes_g \otimes \jac_f}},\\
+        \hes_g \otimes \jac_f &\in (X \otimes W^* \otimes W^*) \otimes (W \otimes V^*),\\
+        \tr_{24}\parens{= \tr_{34}} &: (X \otimes W^* \otimes W^*) \otimes (W \otimes V^*) \to
+        X \otimes W^* \otimes V^*,
+    \end{aligned}
+    \\[15pt]
+    \begin{aligned}
+        \parens{\hes_g \jac_f} \jac_f &= \tr_{24}\parens{\parens{\hes_g \jac_f} \otimes \jac_f},\\
+        \tr_{24} &: \parens{X \otimes W^* \otimes V^*} \otimes \parens{W \otimes V^*}
+        \to X \otimes V^* \otimes V^*,
+    \end{aligned}
+    \\[15pt]
+    \begin{aligned}
+        \jac_g \hes_f &= \tr_{23}\parens{\jac_g \otimes \hes_f},\\
+        \jac_g \otimes \hes_f &\in (X \otimes W^*) \otimes (W \otimes V^* \otimes V^*),\\
+        \tr_{23} &: (X \otimes W^*) \otimes (W \otimes V^* \otimes V^*) \to
+        X \otimes V^* \otimes V^*,
+    \end{aligned}
+\end{align}
+
+
+Let $T$ be a composite map of $T_i$
+\begin{align}
+    \begin{aligned}
+        T &= T_{m-1} \circ T_{m-2} \circ \cdots \circ T_1 \circ T_0,
+        &
+        T: & M_0 \to M_{m-1}
+    \end{aligned}
+    \end{align}
+where $T_i$ is a $C^{\infty}$ diffeomorphism $T_i: M_i \to M_{i+1}$ and $M_i \subset \R$.
+Given $\bm x_i \in M_i$, the Jacobian matrix of $T$ is
+\begin{align}
+    \jac = \pderiv{T}{\bm x_0} = \prod_{k=0}^{m-1} \pderiv{T_{m-1-k}}{\bm x_{m-1-k}}.
+\end{align}
+Let us denote the product in the right-hand of equation as $\jac_{m-1}$, and we have
+\begin{align}
+    \jac_{m-1} = \pderiv{T_{m-1}}{\bm x_{m-1}}\, \jac_{m-2},
+    \label{eq:jac}
+\end{align}
+for $m \ge 2$.
+If $\jac_{k}$ is
+Hessian tensor of $T$ is available by differentiating Eq. (\ref{eq:jac}),
+\begin{align}
+    \hes = \pderiv{\jac}{\bm x_0}
+    =
+    \parens{
+        \pderiv[2]{T_{m-1}}{\bm x_{m-1}}\,
+        \jac_{m-2}
+    }
+    \jac_{m-2}
+    +
+    \pderiv{T_{m-1}}{\bm x_{m-1}}
+    \pderiv{\jac_{m-2}}{\bm x_0}.
+\end{align}
+Rewriting the derivative of $\jac_{m-1}$ by $\hes_{m-1}$, we get
+\begin{align}
+    \hes_{m-1} =
+    \parens{
+        \pderiv[2]{T_{m-1}}{\bm x_{m-1}}\,
+        \jac_{m-2}
+    }
+    \jac_{m-2}
+    +
+    \pderiv{T_{m-1}}{\bm x_{m-1}}
+    \hes_{m-2}
+\end{align}
+Notice that $\parens{\jac_{m-2}\, \jac_{m-2}}$ is sometimes not $\jac_{m-2}^2$
+because the dimensions of $M_{i}$ and $M_{i+1}^*$
+are not necessarily equal.
+\clearpage
+\section{Derivative of a map for the continuous-time systems}
+Consider a $C^{\infty}$ autonomous dynamical system
+\begin{align}
+    \begin{aligned}
+        \deriv{\bm x}{t} &= \bm f(\bm x), &
+        \bm x &\in M \subset \R^n, &
+        t &\in \R,
+    \end{aligned}
+    \label{eq:sys}
+\end{align}
+where $M$ is a state space, and $\bm f$ is a function such that $M \to \R^n$.
+We write the trajectory of the system (\ref{eq:sys}) by $\traj: \R \times M \to M$,
+where $\traj(0, \bm x_0) = \bm x_0$ is the initial state
+and $\traj(t, \bm x_0)$ is the state at $t$.
+Let $\parm$ be an $n-1$ dimensional manifold defined by
+a conditional function $q: M \to \R$
+\begin{align}
+    \parm = \set{
+        \bm x \in M ~|~
+        q(\bm x) = 0
+    }
+\end{align}
+Suppose that $T_0$ is a local map from $\bm x_0 \in M$ to a point in $\parm$
+such that $M \to \parm$.
+Then, the Jacobian matrix of $T_0$ is described by
+\begin{align}
+    \jac_{T_0} = \pderiv{T_0}{\bm x_0} =
+    \left.
+    \brackets{
+        I -
+        \frac{1}{\deriv{q}{\bm x} \bm f(\bm x)}
+        \bm f(\bm x) \deriv{q}{\bm x}
+    }
+    \right|_{\bm x = \bm x_1}
+    \pderiv{\traj}{\bm x_0}(\tau)
+    =
+    B(\bm x_1) \pderiv{\traj}{\bm x_0}(\tau),
+\end{align}
+where $\tau$ is the spent time during the trajectory $\traj$
+moves from $\bm x_0$ to the boundary $\parm$, which only depends on $\bm x_0$,
+and $\bm x_1 = \traj(\tau, \bm x_0)$.
+The Hessian tensor of $T_0$ is
+\begin{align}
+    \hes_{T_0}
+    =
+    \parens{
+        \pderiv{B}{\bm x} (\bm x_1) \jac_{T_0}
+    }
+    \pderiv{\traj}{\bm x_0}(\tau)
+    +
+    B(\bm x_1) \pderiv[2]{\traj}{\bm x_0}(\tau),
+\end{align}
+where
+\begin{align}
+    \pderiv{B}{\bm x}
+    =
+    - \frac{1}{
+        \parens{\deriv{q}{x} \bm f(\bm x)}^2
+    }
+    \braces{
+        \parens{
+            \deriv{\bm f}{\bm x} \otimes \deriv{q}{\bm x}
+            +
+            \bm f(\bm x) \otimes \deriv[2]{q}{\bm x}
+        }
+        \deriv{q}{\bm x} \bm f(\bm x)
+        -
+        \parens{\bm f(\bm x) \deriv{q}{\bm x}} \otimes
+        \parens{
+            \deriv[2]{q}{\bm x} \bm f(\bm x)
+            +
+            \deriv{q}{\bm x} \deriv{\bm f}{\bm x}
+        }
+    },
+\end{align}
+since
+\begin{align}
+    \begin{aligned}
+        B &\in X \otimes X^* &
+        \pderiv{B}{\bm x} &\in X \otimes X^* \otimes X^*,\\
+        \deriv{q}{\bm x}&\in X^*, &
+        \deriv[2]{q}{\bm x} & \in X^* \otimes X^*,\\
+        \bm f(\bm x) &\in X, &
+        \deriv{\bm f}{\bm x} &\in X \otimes X^*.
+    \end{aligned}
+\end{align}
+
+\red{Check if order ``F'' or ``C''!}
+
+On the other hand,
+\begin{align}
+    \deriv{}{t}
+    \parens{\pderiv{\traj}{\bm x_0}}
+    &= \deriv{\bm f}{\bm x} \pderiv{\traj}{\bm x_0}\\
+    \deriv{}{t}
+    \parens{\pderiv[2]{\traj}{\bm x_0}}
+    &= \deriv[2]{\bm f}{\bm x} \pderiv{\traj}{\bm x_0}
+    +
+    \deriv{\bm f}{\bm x} \pderiv[2]{\traj}{\bm x_0},
+\end{align}
+where
+\begin{align}
+    \begin{aligned}
+        \deriv[2]{\bm f}{\bm x} \pderiv{\traj}{\bm x_0}
+        &= \tr_{34} \parens{
+            \deriv[2]{\bm f}{\bm x} \otimes \pderiv{\traj}{\bm x_0}
+        },
+        &
+        \deriv{\bm f}{\bm x} \pderiv[2]{\traj}{\bm x_0}
+        &=
+        \tr_{23} \parens{
+            \deriv{\bm f}{\bm x} \otimes \pderiv[2]{\traj}{\bm x_0}
+        }.
+    \end{aligned}
+\end{align}
+
+\end{document}

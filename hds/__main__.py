@@ -10,13 +10,17 @@ class SolveIvbmpResult:
         The value of state after mapping.
     jac: numpy.ndarray, float, or None, optional
         Jacobian matrix of the map, by default `None`.
+    hes: numpy.ndarray, float, or None, optional
+        Hessian tensor of the map, by default `None`.
     """
     def __init__(self,
         y: numpy.ndarray | float,
-        jac: numpy.ndarray | float | None = None
+        jac: numpy.ndarray | float | None = None,
+        hes: numpy.ndarray | float | None = None,
     ) -> None:
         self.y = y
         self.jac = jac
+        self.hes = hes
     def __repr__(self) -> str:
         return str(self.__dict__)
 
@@ -24,11 +28,16 @@ class SomeJacUndefined(Exception):
     def __str__(self) -> str:
         return "Some mode does not implement Jacobian matrix calculation."
 
+class SomeHesUndefined(Exception):
+    def __str__(self) -> str:
+        return "Some mode does not implement Hessian tensor calculation."
+
 def solve_ivbmp(
     y0: numpy.ndarray | float,
     initial_mode: Mode,
     end_mode: Mode | None = None,
     calc_jac: bool = True,
+    calc_hes: bool = False,
     args = None,
     rtol=1e-6,
     map_count=1
@@ -45,6 +54,8 @@ def solve_ivbmp(
         The end mode, by default `None`. If `None`, the end mode in the method is the same as `initial_mode`.
     calc_jac : bool, optional
         Flag to calculate the Jacobian matrix, by default `True`.
+    calc_hes : bool, optional
+        Flag to calculate the Hessian tensor, by default `True`.
     args : Any, optional
         The parameter to pass to `fun` in all `mode`, by default None.
     rtol : float, optional
@@ -60,16 +71,24 @@ def solve_ivbmp(
     ------
     SomeJacUndefined
         Error of not implemented Jacobian matrix calculation.
+    SomeHesUndefined
+        Error of not implemented Hessian tensor calculation.
     """
     result = None
     current_mode = initial_mode
     if end_mode is None:
         end_mode = initial_mode
     jac = None
+    hes = None
     count = 0
 
     for _ in range(map_count):
         while 1:
+            if isinstance(current_mode, DiscreteMode):
+                print(f"> ==\nWANT: {current_mode.fun.cod_dim, 1, 1}")
+            else:
+                print(f"> ==\nWANT: {current_mode.fun.dom_dim, 1, 1}")
+
             result = current_mode.step(y0, args=[args], rtol=rtol)
             y0 = result.y
 
@@ -77,7 +96,33 @@ def solve_ivbmp(
                 if result.jac is not None:
                     if jac is None:
                         jac = numpy.eye(current_mode.fun.dom_dim)
-                    jacn = result.jac
+                    jacn = numpy.array(result.jac)
+                    if calc_hes:
+                        if result.hes is not None:
+                            if hes is None:
+                                hes = numpy.zeros((current_mode.fun.dom_dim, current_mode.fun.dom_dim, current_mode.fun.dom_dim))
+
+                            hesn = result.hes
+
+                            print('A:', (hesn@jac).shape, jac.shape, '->', numpy.trace(
+                                numpy.tensordot(hesn @ jac, jac, axes=0),
+                                axis1= 1, axis2= 3
+                            ).shape)
+                            print('B:', jacn.shape, hes.shape, '->', (numpy.trace(
+                                numpy.tensordot(jacn, hes, axes=0),
+                                axis1= 1, axis2= 2
+                            )).shape)
+
+                            hes = numpy.trace(
+                                numpy.tensordot(hesn @ jac, jac, axes=0),
+                                axis1= 1, axis2= 3
+                            ) + numpy.trace(
+                                numpy.tensordot(numpy.array(jacn), numpy.array(hes), axes=0),
+                                axis1= 1, axis2= 2
+                            )
+                            print("< ==")
+                        else:
+                            raise SomeHesUndefined
                     jac = jacn @ jac
                 else:
                     raise SomeJacUndefined
@@ -93,4 +138,8 @@ def solve_ivbmp(
             if current_mode == end_mode:
                 break
 
-    return SolveIvbmpResult(y0, float(jac) if jac is not None and jac.size == 1 else jac)
+    return SolveIvbmpResult(
+        y0,
+        float(jac) if jac is not None and jac.size == 1 else (numpy.squeeze(jac) if jac is not None else None),
+        float(hes) if hes is not None and hes.size == 1 else (numpy.squeeze(hes) if hes is not None else None)
+    )
