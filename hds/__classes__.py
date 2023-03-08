@@ -469,6 +469,10 @@ class ContinuousMode (Mode):
                                     numpy.trace(numpy.tensordot(dBdy, jact, axes=0), axis1=0, axis2=3).transpose(2, 0, 1), jact, axes=0
                                 ), axis1=2, axis2=3)
                                 +
+                                numpy.trace(numpy.tensordot(
+                                    numpy.trace(numpy.tensordot(dBdy, jac, axes=0), axis1=0, axis2=3).transpose(2, 0, 1), jact, axes=0
+                                ), axis1=2, axis2=3).transpose(2, 1, 0)
+                                +
                                 numpy.trace(numpy.tensordot(B, hest, axes=0), axis1=1, axis2=3).transpose(2, 0, 1)
                             )
                             print('dBdy=\n', dBdy)
@@ -478,11 +482,14 @@ class ContinuousMode (Mode):
                             print('jac=\n', jac)
                             print('B=\n', B)
                             print('hest=\n', hest)
-                            print('dBdy @ jact\n',
-                                numpy.trace(numpy.tensordot(dBdy, jact, axes=0), axis1=0, axis2=3).transpose(2, 0, 1))
+                            print('dBdy @ jac\n',
+                                numpy.trace(numpy.tensordot(dBdy, jac, axes=0), axis1=0, axis2=3).transpose(2, 0, 1))
                             print('(dBdy @ jact) @ jact\n', numpy.trace(numpy.tensordot(
                                     numpy.trace(numpy.tensordot(dBdy, jact, axes=0), axis1=0, axis2=3).transpose(2, 0, 1), jact, axes=0
                                 ), axis1=2, axis2=3))
+                            print('(dBdy @ jac) @ jact\n', numpy.trace(numpy.tensordot(
+                                    numpy.trace(numpy.tensordot(dBdy, jac, axes=0), axis1=0, axis2=3).transpose(2, 0, 1), jact, axes=0
+                                ), axis1=2, axis2=3).transpose(2, 1, 0))
                             print('B@hest\n', numpy.trace(numpy.tensordot(B, hest, axes=0), axis1=1, axis2=3).transpose(2, 0, 1))
                             print('hes=(dBdy @ jact) @ jact + B @ hest\n', hes)
                     i_border = i

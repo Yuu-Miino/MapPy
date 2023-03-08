@@ -9,13 +9,22 @@ print((djac-jac)/1e-5)
 
 jac = np.array([[0.,             0.            ],
  [0.37237016737,  0.385652262573]])
-djacx = np.array([[ 1.307144594781e-14, -9.226432609846e-15],
+djacx = np.array([[ 0, 0],
  [ 3.723701576455e-01,  3.856522759075e-01]])
 djacy = np.array([[0.,             0.,            ],
  [0.372370180705, 0.385652249253]])
 
 print('x', (djacx-jac)/1e-7)
 print('y', (djacy-jac)/1e-7)
+
+hes = np.array([[[ 0.,              0.            ],
+  [-0.122314388198,  0.107378966938]],
+
+ [[ 0.,              0.            ],
+  [ 0.151043394255, -0.114869206755]]])
+
+print('hes(i)x\n', (djacx-jac)/1e-7 - hes[0])
+print('hes(i)y\n', (djacy-jac)/1e-7 - hes[1])
 
 jac = np.array([[ 1.177371217003e+02, -8.310432022971e+01],
  [ 1.045829351875e+00, -8.970645965926e-02]])
@@ -49,3 +58,14 @@ print('hes\n', hes)
 print('term1\n', hest[1])
 print('term2\n', np.outer(dfdy@ jact[:,1], dtaudx0))
 print('term3\n', np.outer(dydt, dtaudx02))
+
+
+B = np.array([[ 0.,              0.            ],
+ [-0.005720024193,  1.            ]])
+Bx = np.array([[ 0,  0],
+ [-5.720024171406e-03,  1]])
+By = np.array([[ 0.,              0.            ],
+ [-0.005720024171,  1.            ]])
+
+print('dBdx0\n', (Bx-B)/1e-7)
+print('dBdy0\n', (By-B)/1e-7)
