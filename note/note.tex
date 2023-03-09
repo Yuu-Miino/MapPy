@@ -215,13 +215,14 @@ The Hessian tensor of $T_0$ is
     }
     \pderiv{\traj}{\bm x_0}(\tau)
     +
-    \parens{
-        \pderiv{B}{\bm x} (\bm x_1) B \pderiv{\traj}{\bm x_0}(\tau)
+    \red{\parens{
+        \pderiv{B}{\bm x} (\bm x_1) B(\bm x_1) \pderiv{\traj}{\bm x_0}(\tau)
     }
-    \pderiv{\traj}{\bm x_0}(\tau)
+    \pderiv{\traj}{\bm x_0}(\tau)}
     +
     B(\bm x_1) \pderiv[2]{\traj}{\bm x_0}(\tau),
 \end{align}
+\red{(I don't know where the red part comes from. Maybe associated with the time term $\tau$.)}
 where
 \begin{align}
     \pderiv{B}{\bm x}

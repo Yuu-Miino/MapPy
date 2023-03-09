@@ -467,11 +467,11 @@ class ContinuousMode (Mode):
                             hes = (
                                 numpy.trace(numpy.tensordot(
                                     numpy.trace(numpy.tensordot(dBdy, jact, axes=0), axis1=0, axis2=3).transpose(2, 0, 1), jact, axes=0
-                                ), axis1=2, axis2=3)
+                                ), axis1=2, axis2=3).transpose(2, 1, 0)
                                 +
                                 numpy.trace(numpy.tensordot(
                                     numpy.trace(numpy.tensordot(dBdy, jac, axes=0), axis1=0, axis2=3).transpose(2, 0, 1), jact, axes=0
-                                ), axis1=2, axis2=3).transpose(2, 1, 0)
+                                ), axis1=2, axis2=3)
                                 +
                                 numpy.trace(numpy.tensordot(B, hest, axes=0), axis1=1, axis2=3).transpose(2, 0, 1)
                             )
@@ -482,12 +482,20 @@ class ContinuousMode (Mode):
                             print('jac=\n', jac)
                             print('B=\n', B)
                             print('hest=\n', hest)
-                            print('dBdy @ jac\n',
-                                numpy.trace(numpy.tensordot(dBdy, jac, axes=0), axis1=0, axis2=3).transpose(2, 0, 1))
+                            print('C=dBdy @ jact\n',
+                                numpy.trace(numpy.tensordot(dBdy, jact, axes=0), axis1=0, axis2=3).transpose(2, 0, 1))
                             print('(dBdy @ jact) @ jact\n', numpy.trace(numpy.tensordot(
                                     numpy.trace(numpy.tensordot(dBdy, jact, axes=0), axis1=0, axis2=3).transpose(2, 0, 1), jact, axes=0
                                 ), axis1=2, axis2=3))
+                            print('\n(dBdy @ jact) @ jact .T\n', numpy.trace(numpy.tensordot(
+                                    numpy.trace(numpy.tensordot(dBdy, jact, axes=0), axis1=0, axis2=3).transpose(2, 0, 1), jact, axes=0
+                                ), axis1=2, axis2=3).transpose(2, 1, 0))
+                            print('D=dBdy @ (jac)\n',
+                                numpy.trace(numpy.tensordot(dBdy, jac, axes=0), axis1=0, axis2=3).transpose(2, 0, 1))
                             print('(dBdy @ jac) @ jact\n', numpy.trace(numpy.tensordot(
+                                    numpy.trace(numpy.tensordot(dBdy, jac, axes=0), axis1=0, axis2=3).transpose(2, 0, 1), jact, axes=0
+                                ), axis1=2, axis2=3))
+                            print('(dBdy @ jac) @ jact .T\n', numpy.trace(numpy.tensordot(
                                     numpy.trace(numpy.tensordot(dBdy, jac, axes=0), axis1=0, axis2=3).transpose(2, 0, 1), jact, axes=0
                                 ), axis1=2, axis2=3).transpose(2, 1, 0))
                             print('B@hest\n', numpy.trace(numpy.tensordot(B, hest, axes=0), axis1=1, axis2=3).transpose(2, 0, 1))
