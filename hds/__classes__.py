@@ -376,9 +376,6 @@ class ContinuousMode (Mode):
         else:
             hest = None
             hes = None
-        print('jact\n', jact)
-        print('hest\n', hest)
-        print('tau\n', sol.t[-1])
 
         # border detect
         if sol.status == 1:
@@ -402,8 +399,8 @@ class ContinuousMode (Mode):
                         if hest is not None:
                             dfdy = jac_fun(0, y1)
                             d2bdy2 = d2evs[i](0, y1)
-                            print('dfdy', dfdy)
-                            """ print('Y, Y* x Y* -> Y, Y*, Y* :',
+                            """ print('dfdy', dfdy)
+                            print('Y, Y* x Y* -> Y, Y*, Y* :',
                                 dfdy.shape,
                                 dbdy.shape,
                                 '->',
@@ -464,7 +461,7 @@ class ContinuousMode (Mode):
                                 ).transpose(2, 0, 1)
                             ) """
                             # hes = (dBdy @ jac) @ jact + B @ hest
-                            hes = (
+                            """ hes = (
                                 numpy.trace(numpy.tensordot(
                                     numpy.trace(numpy.tensordot(dBdy, jact, axes=0), axis1=0, axis2=3).transpose(2, 0, 1), jact, axes=0
                                 ), axis1=2, axis2=3).transpose(2, 1, 0)
@@ -474,19 +471,30 @@ class ContinuousMode (Mode):
                                 ), axis1=2, axis2=3)
                                 +
                                 numpy.trace(numpy.tensordot(B, hest, axes=0), axis1=1, axis2=3).transpose(2, 0, 1)
+                            ) """
+                            hes = (
+                                (numpy.trace(numpy.tensordot( dBdy, jac, axes=0), axis1=0, axis2=3).transpose(2, 0, 1)
+                                    @ jact).transpose(2, 1, 0)
+                                +
+                                numpy.trace(numpy.tensordot(B,
+                                    hest-numpy.tensordot(dfdy @ jact, dbdy@ jact, axes=0).transpose(2, 0, 1)/numpy.dot(dbdy, dydt),
+                                axes=0), axis1=1, axis2=3).transpose(2, 0, 1)
                             )
-                            print('dBdy=\n', dBdy)
-                            """ print('(Bx-B)/eps\n', (Bx-B) / 1e-5)
-                            print('(By-B)/eps\n', (By-B) / 1e-5) """
+                            """ print('dBdy=\n', dBdy)
+                            print('(Bx-B)/eps\n', (Bx-B) / 1e-5)
+                            print('(By-B)/eps\n', (By-B) / 1e-5)
                             print('jact=\n', jact)
                             print('jac=\n', jac)
                             print('B=\n', B)
                             print('hest=\n', hest)
+                            print('hest2\n', hest2)
+                            print('hest-hest2=\n', hest-hest2)
                             print('C=dBdy @ jact\n',
                                 numpy.trace(numpy.tensordot(dBdy, jact, axes=0), axis1=0, axis2=3).transpose(2, 0, 1))
                             print('(dBdy @ jact) @ jact\n', numpy.trace(numpy.tensordot(
                                     numpy.trace(numpy.tensordot(dBdy, jact, axes=0), axis1=0, axis2=3).transpose(2, 0, 1), jact, axes=0
                                 ), axis1=2, axis2=3))
+                            print('\ncheck\n', numpy.trace(numpy.tensordot(B, -hest2, axes=0), axis1=1, axis2=3).transpose(2, 0, 1))
                             print('\n(dBdy @ jact) @ jact .T\n', numpy.trace(numpy.tensordot(
                                     numpy.trace(numpy.tensordot(dBdy, jact, axes=0), axis1=0, axis2=3).transpose(2, 0, 1), jact, axes=0
                                 ), axis1=2, axis2=3).transpose(2, 1, 0))
@@ -499,7 +507,7 @@ class ContinuousMode (Mode):
                                     numpy.trace(numpy.tensordot(dBdy, jac, axes=0), axis1=0, axis2=3).transpose(2, 0, 1), jact, axes=0
                                 ), axis1=2, axis2=3).transpose(2, 1, 0))
                             print('B@hest\n', numpy.trace(numpy.tensordot(B, hest, axes=0), axis1=1, axis2=3).transpose(2, 0, 1))
-                            print('hes=(dBdy @ jact) @ jact + B @ hest\n', hes)
+                            print('hes=(dBdy @ jact) @ jact + B @ hest\n', hes) """
                     i_border = i
 
         # Make a response instance
@@ -622,7 +630,7 @@ class DiscreteMode (Mode):
             try:
                 af = self.fun.cod_dim+(self.fun.dom_dim*self.fun.cod_dim)
                 at = af + (self.fun.dom_dim*self.fun.cod_dim) * self.fun.dom_dim
-                hes = sol[af:at].reshape((self.fun.cod_dim, self.fun.dom_dim, self.fun.dom_dim), order='F')
+                hes = sol[af:at].reshape((self.fun.dom_dim, self.fun.cod_dim, self.fun.dom_dim), order='F')
 
             except ValueError:
                 raise HesDimErr(dom_dim=self.fun.dom_dim, cod_dim=self.fun.cod_dim, length=len(sol)) from None

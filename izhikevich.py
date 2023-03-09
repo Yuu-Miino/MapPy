@@ -89,7 +89,6 @@ def pinv_hes(y, param) -> np.ndarray:
 ## Main
 def main ():
     y0 = -1.71591635
-    x0 = np.array([-50, y0])
     param = Parameter()
 
     mode0 = DM(p, jac_fun=p_jac, hes_fun=p_hes)
@@ -101,18 +100,11 @@ def main ():
 
     mode0.next = mode1
     mode1.next = [mode2]
-    mode2.next = mode1
+    mode2.next = mode3
     mode3.next = mode0
 
-    result1 = solve_ivbmp(x0, mode1, args=param, calc_hes=True)
-    print("=================")
-    result2 = solve_ivbmp(x0+np.array([1e-7, 0]), mode1, args=param, calc_hes=True)
-    print("=================")
-    result3 = solve_ivbmp(x0+np.array([0, 1e-7]), mode1, args=param, calc_hes=True)
-
-    print(result1, '\n', result2, '\n', result3)
-    print('hes(n):x0\n', (result2.jac-result1.jac)/1e-7)
-    print('hes(n):y0\n', (result3.jac-result1.jac)/1e-7)
+    result = solve_ivbmp(y0, mode0, args=param, calc_hes=True)
+    print(result)
 
 if __name__=="__main__":
     main()

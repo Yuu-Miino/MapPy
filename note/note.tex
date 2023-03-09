@@ -209,18 +209,38 @@ and $\bm x_1 = \traj(\tau, \bm x_0)$.
 The Hessian tensor of $T_0$ is
 \begin{align}
     \hes_{T_0}
-    =
-    \parens{
+    &=
+    \red{\parens{
         \pderiv{B}{\bm x} (\bm x_1) \pderiv{\traj}{\bm x_0}(\tau)
     }
-    \pderiv{\traj}{\bm x_0}(\tau)
+    \pderiv{\traj}{\bm x_0}(\tau)}
     +
-    \red{\parens{
-        \pderiv{B}{\bm x} (\bm x_1) B(\bm x_1) \pderiv{\traj}{\bm x_0}(\tau)
+    {\parens{
+        \pderiv{B}{\bm x} (\bm x_1) \jac_{T_0}
     }
     \pderiv{\traj}{\bm x_0}(\tau)}
     +
     B(\bm x_1) \pderiv[2]{\traj}{\bm x_0}(\tau),
+    \\
+    \hes_{T_0}
+    &=
+    \parens{\pderiv{B}{\bm x}(\bm x_1) \jac_{T_0}}\pderiv{\traj}{\bm x_0}(\tau)
+    +
+    B(\bm x_1)\brackets{
+        \pderiv[2]{\traj}{\bm x_0}(\tau)
+        +
+        \parens{\deriv{}{t} \pderiv{\traj}{\bm x_0}(\tau)} \otimes \pderiv{\tau}{\bm x_0}
+    }
+    \\
+    &=
+    \parens{\pderiv{B}{\bm x}(\bm x_1) \jac_{T_0}}\pderiv{\traj}{\bm x_0}(\tau)
+    +
+    B(\bm x_1)\brackets{
+        \pderiv[2]{\traj}{\bm x_0}(\tau)
+        -\frac{1}{\deriv{q}{\bm x}\bm f(\bm x_1)}
+        \parens{\deriv{\bm f}{\bm x}\pderiv{\traj}{\bm x_0}(\tau)} \otimes
+        \parens{\deriv{q}{\bm x} \pderiv{\traj}{\bm x_0}(\tau)}
+    }
 \end{align}
 \red{(I don't know where the red part comes from. Maybe associated with the time term $\tau$.)}
 where
