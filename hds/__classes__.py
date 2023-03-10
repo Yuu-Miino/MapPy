@@ -204,7 +204,11 @@ class ContinuousMode (Mode):
         dim = ode_fun.dom_dim
         try:
             dydy0 = y[dim:dim+(dim**2)].reshape((dim, dim), order='F')
-            d2ydy02 = y[dim+(dim**2):dim+(dim**2)+(dim**3)].reshape((dim, dim, dim)).transpose(0, 2, 1)
+            ui, uj = numpy.triu_indices(dim)
+            d2ydy02 = numpy.empty(dim**3).reshape(dim, dim, dim)
+            d2ydy02[ui, uj] = y[dim+(dim**2):dim+(dim**2)+(dim**2*(dim+1)//2)].reshape(dim*(dim+1)//2, dim)
+            d2ydy02[uj, ui] = d2ydy02[ui, uj].copy()
+            d2ydy02 = d2ydy02.transpose(0, 2, 1)
         except ValueError:
             raise HesDimErr(dom_dim=dim, cod_dim=dim, length=len(y)) from None
 
@@ -212,7 +216,7 @@ class ContinuousMode (Mode):
         ode_jac = lambda y, fun=jac_fun: fun(y, *args)
         ode_hes = lambda y, fun=hes_fun: fun(y, *args)
 
-        deriv = numpy.empty(dim+(dim**2)+(dim**3))
+        deriv = numpy.empty(dim+(dim**2)+(dim**2*(dim+1)//2))
         # ODE
         deriv[0:dim] = ode(y[0:dim])
 
@@ -222,30 +226,9 @@ class ContinuousMode (Mode):
 
         # Hessian
         hes = ode_hes(y[0:dim])
-        deriv[dim+(dim**2):dim+(dim**2)+(dim**3)] = (
-            numpy.trace(numpy.tensordot(
-                numpy.trace(numpy.tensordot(hes, dydy0, axes=0), axis1=0, axis2=3).transpose(2, 0, 1), dydy0, axes=0
-            ), axis1=2, axis2=3)
-            +
-            numpy.trace(numpy.tensordot(jac, d2ydy02, axes=0), axis1=1, axis2=3).transpose(2, 0, 1)
-        ).transpose(0, 2, 1).flatten()
-        """ print('jac\n', jac)
-        print('row data\n', y[dim+(dim**2):dim+(dim**2)+(dim**3)])
-        print('d2ydy02\n', d2ydy02)
-        print('\nterm2=jac x d2dy02\n', numpy.trace(numpy.tensordot(jac, d2ydy02, axes=0), axis1=1, axis2=3).transpose(2, 0, 1)) """
-        """ print('hes\n',hes)
-        print('dydy0\n',dydy0)
-        print('\nterm1=(hes x dydy0) dyd0\n', numpy.trace(numpy.tensordot(
-            numpy.trace(numpy.tensordot(hes, dydy0, axes=0), axis1=0, axis2=3).transpose(2, 0, 1), dydy0, axes=0
-        ), axis1=2, axis2=3))
-        print('\nresult\n', (
-            numpy.trace(numpy.tensordot(hes, dydy0 @ dydy0, axes=0), axis1=2, axis2=3)
-            +
-            numpy.trace(numpy.tensordot(jac, d2ydy02, axes=0), axis1=1, axis2=3)
-        ))
-        print('\nflatten\n', deriv[dim+(dim**2):dim+(dim**2)+(dim**3)])
-        print('\njacderiv\n', deriv[dim:dim+(dim**2)])
-        print() """
+        deriv[dim+(dim**2):dim+(dim**2)+(dim**2*(dim+1)//2)] = (
+            (hes @ dydy0).T @ dydy0 + jac @ d2ydy02
+        ).transpose(0, 2, 1)[ui, uj].flatten()
         return deriv
 
     @classmethod
@@ -355,7 +338,7 @@ class ContinuousMode (Mode):
         if self.jac_fun is not None:
             y0in = numpy.append(y0in, numpy.eye(dim).flatten())
         if self.hes_fun is not None:
-            y0in = numpy.append(y0in, numpy.zeros(dim*dim*dim))
+            y0in = numpy.append(y0in, numpy.zeros(dim**2*(dim+1)//2))
 
         ## Main loop: solve initial value problem
         sol = solve_ivp(ode, [0, self.max_interval], y0in, events=borders, **options)
@@ -371,143 +354,40 @@ class ContinuousMode (Mode):
             jac = None
 
         if self.hes_fun is not None:
-            hest = numpy.array(sol.y.T[-1][dim+(dim**2):dim+(dim**2)+(dim**3)]).reshape((dim, dim, dim)).transpose(0, 2, 1)
+            ui, uj = numpy.triu_indices(dim)
+            hest = numpy.empty(dim**3).reshape(dim, dim, dim)
+            hest[ui, uj] = numpy.array(sol.y.T[-1][dim+(dim**2):dim+(dim**2)+(dim**2*(dim+1)//2)]).reshape(dim*(dim+1)//2, dim)
+            hest[uj, ui] = hest[ui, uj].copy()
+            hest = hest.transpose(0, 2, 1)
             hes  = hest.copy()
         else:
             hest = None
             hes = None
-
         # border detect
         if sol.status == 1:
             # For each borders
             for i, ev in enumerate(self.borders):
                 if len(sol.t_events[i]) != 0:
                     if jact is not None:
-                        dydt = ode_fun(0, y1)
-                        dbdy = devs[i](0, y1)
-                        B = (numpy.eye(dim) - 1.0/numpy.dot(dbdy, dydt) * numpy.outer(dydt, dbdy))
+                        dydt = numpy.array(ode_fun(0, y1))
+                        dbdy = numpy.array(devs[i](0, y1))
+                        dot: numpy.float64 = numpy.dot(dbdy, dydt)
+                        out = numpy.outer(dydt, dbdy)
+                        B   = numpy.eye(dim) - out / dot
                         jac = B @ jact
 
-                        """ dydtx = ode_fun(0, y1+numpy.array([1e-5, 0]))
-                        dbdyx = devs[i](0, y1+numpy.array([1e-5, 0]))
-                        Bx = (numpy.eye(dim) - 1.0/numpy.dot(dbdyx, dydtx) * numpy.outer(dydtx, dbdyx))
-
-                        dydty = ode_fun(0, y1+numpy.array([0, 1e-5]))
-                        dbdyy = devs[i](0, y1+numpy.array([0, 1e-5]))
-                        By = (numpy.eye(dim) - 1.0/numpy.dot(dbdyy, dydty) * numpy.outer(dydty, dbdyy)) """
-
                         if hest is not None:
-                            dfdy = jac_fun(0, y1)
-                            d2bdy2 = d2evs[i](0, y1)
-                            """ print('dfdy', dfdy)
-                            print('Y, Y* x Y* -> Y, Y*, Y* :',
-                                dfdy.shape,
-                                dbdy.shape,
-                                '->',
-                                numpy.tensordot(dfdy, dbdy, axes=0).shape)
-                            print(dfdy, dbdy, '\n=', numpy.tensordot(dfdy, dbdy, axes=0))
-                            print('Y x Y*, Y* -> Y, Y*, Y* :',
-                                dydt.shape,
-                                d2bdy2.shape,
-                                '->',
-                                numpy.tensordot(dydt, d2bdy2, axes=0).shape)
-                            print(dydt, d2bdy2, '\n=', numpy.tensordot(dydt, d2bdy2, axes=0))
-                            print('Y*, Y* @ Y -> Y*:',
-                                d2bdy2.shape,
-                                dydt.shape,
-                                '->',
-                                (d2bdy2@dydt).shape)
-                            print(d2bdy2, dydt, '\n=', d2bdy2@dydt)
-                            print('Y* @ Y, Y* -> Y*:',
-                                dbdy.shape,
-                                dfdy.shape,
-                                '->',
-                                (dbdy@dfdy).shape)
-                            print(dbdy, dfdy, '\n=', dbdy@dfdy)
+                            dfdy    = numpy.array(jac_fun(0, y1))
+                            d2bdy2  = numpy.array(d2evs[i](0, y1))
 
-                            print('Y, Y* x Y* -> Y, Y*, Y*:',
-                                numpy.outer(dydt, dbdy).shape,
-                                (d2bdy2 @ dydt + dbdy @ dfdy).shape,
-                                '->',
-                                numpy.tensordot(numpy.outer(dydt, dbdy), (d2bdy2 @ dydt + dbdy @ dfdy), axes=0).shape)
-                            print(numpy.outer(dydt, dbdy), d2bdy2 @ dydt + dbdy @ dfdy, '\n=',
-                                numpy.tensordot(numpy.outer(dydt, dbdy), (d2bdy2 @ dydt + dbdy @ dfdy), axes=0)) """
-                            dBdy = -1.0/(numpy.dot(dbdy, dydt)**2) * (
-                                (
-                                    numpy.tensordot(dfdy, dbdy, axes=0).transpose((1, 0, 2))
-                                    + numpy.tensordot(dydt, d2bdy2, axes=0)
-                                ) * numpy.dot(dbdy, dydt) -
-                                numpy.tensordot(
-                                    numpy.outer(dydt, dbdy), (d2bdy2 @ dydt + dbdy @ dfdy), axes=0
-                                ).transpose(2, 0, 1)
-                            )
-                            """ print('first=\n',
-                                numpy.tensordot(dfdy, dbdy, axes=0).transpose((1, 0, 2))+
-                                numpy.tensordot(dydt, d2bdy2, axes=0),'\n',
-                                numpy.dot(dbdy, dydt)
-                            )
-                            print('second=\n',
-                                numpy.outer(dydt, dbdy),'\n',
-                                dbdy,'\n',
-                                dfdy,'\n',
-                                (d2bdy2 @ dydt + dbdy @ dfdy)
-                            )
-                            print('check=\n', (
-                                    numpy.tensordot(dfdy, dbdy, axes=0)
-                                    + numpy.tensordot(dydt, d2bdy2, axes=0)
-                                ) * numpy.dot(dbdy, dydt),'\n\n',
-                                numpy.tensordot(
-                                    numpy.outer(dydt, dbdy), (d2bdy2 @ dydt + dbdy @ dfdy), axes=0
-                                ).transpose(2, 0, 1)
-                            ) """
-                            # hes = (dBdy @ jac) @ jact + B @ hest
-                            """ hes = (
-                                numpy.trace(numpy.tensordot(
-                                    numpy.trace(numpy.tensordot(dBdy, jact, axes=0), axis1=0, axis2=3).transpose(2, 0, 1), jact, axes=0
-                                ), axis1=2, axis2=3).transpose(2, 1, 0)
-                                +
-                                numpy.trace(numpy.tensordot(
-                                    numpy.trace(numpy.tensordot(dBdy, jac, axes=0), axis1=0, axis2=3).transpose(2, 0, 1), jact, axes=0
-                                ), axis1=2, axis2=3)
-                                +
-                                numpy.trace(numpy.tensordot(B, hest, axes=0), axis1=1, axis2=3).transpose(2, 0, 1)
-                            ) """
+                            dBdy = - (
+                                numpy.tensordot(dfdy.T, dbdy, axes=0) + numpy.tensordot(dydt, d2bdy2, axes=0)
+                            ) / dot + numpy.tensordot(d2bdy2 @ dydt + dbdy @ dfdy, out, axes=0) / (dot ** 2)
+
                             hes = (
-                                (numpy.trace(numpy.tensordot( dBdy, jac, axes=0), axis1=0, axis2=3).transpose(2, 0, 1)
-                                    @ jact).transpose(2, 1, 0)
-                                +
-                                numpy.trace(numpy.tensordot(B,
-                                    hest-numpy.tensordot(dfdy @ jact, dbdy@ jact, axes=0).transpose(2, 0, 1)/numpy.dot(dbdy, dydt),
-                                axes=0), axis1=1, axis2=3).transpose(2, 0, 1)
-                            )
-                            """ print('dBdy=\n', dBdy)
-                            print('(Bx-B)/eps\n', (Bx-B) / 1e-5)
-                            print('(By-B)/eps\n', (By-B) / 1e-5)
-                            print('jact=\n', jact)
-                            print('jac=\n', jac)
-                            print('B=\n', B)
-                            print('hest=\n', hest)
-                            print('hest2\n', hest2)
-                            print('hest-hest2=\n', hest-hest2)
-                            print('C=dBdy @ jact\n',
-                                numpy.trace(numpy.tensordot(dBdy, jact, axes=0), axis1=0, axis2=3).transpose(2, 0, 1))
-                            print('(dBdy @ jact) @ jact\n', numpy.trace(numpy.tensordot(
-                                    numpy.trace(numpy.tensordot(dBdy, jact, axes=0), axis1=0, axis2=3).transpose(2, 0, 1), jact, axes=0
-                                ), axis1=2, axis2=3))
-                            print('\ncheck\n', numpy.trace(numpy.tensordot(B, -hest2, axes=0), axis1=1, axis2=3).transpose(2, 0, 1))
-                            print('\n(dBdy @ jact) @ jact .T\n', numpy.trace(numpy.tensordot(
-                                    numpy.trace(numpy.tensordot(dBdy, jact, axes=0), axis1=0, axis2=3).transpose(2, 0, 1), jact, axes=0
-                                ), axis1=2, axis2=3).transpose(2, 1, 0))
-                            print('D=dBdy @ (jac)\n',
-                                numpy.trace(numpy.tensordot(dBdy, jac, axes=0), axis1=0, axis2=3).transpose(2, 0, 1))
-                            print('(dBdy @ jac) @ jact\n', numpy.trace(numpy.tensordot(
-                                    numpy.trace(numpy.tensordot(dBdy, jac, axes=0), axis1=0, axis2=3).transpose(2, 0, 1), jact, axes=0
-                                ), axis1=2, axis2=3))
-                            print('(dBdy @ jac) @ jact .T\n', numpy.trace(numpy.tensordot(
-                                    numpy.trace(numpy.tensordot(dBdy, jac, axes=0), axis1=0, axis2=3).transpose(2, 0, 1), jact, axes=0
-                                ), axis1=2, axis2=3).transpose(2, 1, 0))
-                            print('B@hest\n', numpy.trace(numpy.tensordot(B, hest, axes=0), axis1=1, axis2=3).transpose(2, 0, 1))
-                            print('hes=(dBdy @ jact) @ jact + B @ hest\n', hes) """
+                                (dBdy.transpose(1, 2, 0) @ jac).transpose(2, 0, 1) @ jact # Not (dBdy @ jac).T @ jact, strictly
+                                + B @ ( hest - numpy.tensordot(dbdy @ jact, dfdy @ jact, axes=0) / dot)
+                            ).T
                     i_border = i
 
         # Make a response instance

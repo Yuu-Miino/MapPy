@@ -98,7 +98,7 @@ def solve_ivbmp(
                                 hes = numpy.zeros((current_mode.fun.dom_dim, current_mode.fun.dom_dim, current_mode.fun.dom_dim))
 
                             hesn = result.hes
-                            hes = (hesn@jac).transpose(2, 1, 0) @ jac + jacn @ hes
+                            hes = (hesn @ jac).T @ jac + jacn @ hes
                         else:
                             raise SomeHesUndefined
                     jac = jacn @ jac
