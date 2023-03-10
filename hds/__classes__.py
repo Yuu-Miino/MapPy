@@ -380,12 +380,11 @@ class ContinuousMode (Mode):
                             dfdy    = numpy.array(jac_fun(0, y1))
                             d2bdy2  = numpy.array(d2evs[i](0, y1))
 
-                            dBdy = - (
+                            dBdy = - 1.0 / dot * (
                                 numpy.tensordot(dfdy.T, dbdy, axes=0) + numpy.tensordot(dydt, d2bdy2, axes=0)
-                            ) / dot + numpy.tensordot(d2bdy2 @ dydt + dbdy @ dfdy, out, axes=0) / (dot ** 2)
-
+                            ) + numpy.tensordot(d2bdy2 @ dydt + dbdy @ dfdy, out, axes=0) / (dot ** 2)
                             hes = (
-                                (dBdy.transpose(1, 2, 0) @ jac).transpose(2, 0, 1) @ jact # Not (dBdy @ jac).T @ jact, strictly
+                                numpy.einsum('ijk, il, km -> ljm', dBdy, jac, jact)
                                 + B @ ( hest - numpy.tensordot(dbdy @ jact, dfdy @ jact, axes=0) / dot)
                             ).T
                     i_border = i

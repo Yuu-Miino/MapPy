@@ -37,3 +37,8 @@ atop = Jg @ Hf.transpose(1, 0, 2)   # (4, 2, 4) tensor
 atop = atop.transpose(1, 0, 2)      # (2, 4, 4) tensor
 
 print(cont23 == atop) # (2, 4, 4) tensor in X, V*, V*, with All True
+
+# Einstein notation
+ein = np.einsum('ij, jkl->ikl', Jg, Hf) # X W*, W V* V* -> X V* V*
+
+print(cont23 == ein)

@@ -1,5 +1,5 @@
 \documentclass[a4paper]{article}
-\usepackage[left=20mm, right=20mm]{geometry}
+\usepackage[left=20mm, right=20mm, top=25mm, bottom=25mm]{geometry}
 
 \usepackage{newtxtext, newtxmath}
 \usepackage{bm}
@@ -146,7 +146,6 @@ In the Python implementation with NumPy, an ``@'' operator (equivalently ``numpy
 to shorten the calculation code of some contractions.
 Listing \ref{lst:atop} shows the example usage.
 The option \texttt{axes = 0} makes the function return the tensor product of specified tensors.
-
 \begin{center}
     \lstinputlisting[%
         firstline=1, lastline=18,
@@ -155,7 +154,6 @@ The option \texttt{axes = 0} makes the function return the tensor product of spe
         label={lst:atop}%
     ]{contraction.py}
 \end{center}
-
 Note that the ``@'' operator just calculates the matrix multiplication of two matrices,
 which compose of the last two indices of the target tensors, for each index of the other axes.
 Hence, we cannot directly use ``@'' operator with Eq. (\ref{eq:hjj}) and Eq. (\ref{eq:jh}).
@@ -163,10 +161,10 @@ In the cases, we can use ``@'' operator after swapping the axes of the tensors,
 as shown in Lsts. \ref{lst:atop_swap1} and \ref{lst:atop_swap2}.
 \begin{center}
     \lstinputlisting[%
-        firstline=20, lastline=26,
-        language=python,
-        caption={Example usage of ``@'' operator after axes swapping (for Eq. (\ref{eq:hjj})).},
-        label={lst:atop_swap1}%
+    firstline=20, lastline=26,
+    language=python,
+    caption={Example usage of ``@'' operator after axes swapping (for Eq. (\ref{eq:hjj})).},
+    label={lst:atop_swap1}%
     ]{contraction.py}
 \end{center}
 As commented in Lst. \ref{lst:atop_swap2},
@@ -178,10 +176,20 @@ $X\otimes W^*$ and $W\otimes V^*$ for each element in $V^*$.
 We can revert the order by \texttt{transpose} method again.
 \begin{center}
     \lstinputlisting[%
-        firstline=28, lastline=39,
-        language=python,
-        caption={Example usage of ``@'' operator after axes swapping (for Eq. (\ref{eq:jh})).},
-        label={lst:atop_swap2}%
+    firstline=28, lastline=39,
+    language=python,
+    caption={Example usage of ``@'' operator after axes swapping (for Eq. (\ref{eq:jh})).},
+    label={lst:atop_swap2}%
+    ]{contraction.py}
+\end{center}
+One can use the Einstein notation instead of a complex combination of traces and transposes,
+as shown in Lst. \ref{lst:einsum}.
+\begin{center}
+    \lstinputlisting[%
+    firstline=41, lastline=44,
+    language=python,
+    caption={Example usage of ``numpy.einsum'' function (for Eq. (\ref{eq:jh})).},
+    label={lst:einsum}%
     ]{contraction.py}
 \end{center}
 
@@ -191,7 +199,7 @@ Let $T$ be a composite map of $T_i$
     \begin{aligned}
         T &= T_{m-1} \circ T_{m-2} \circ \cdots \circ T_1 \circ T_0,
         &
-        T: & M_0 \to M_{m-1}
+        T: & M_0 \to M_{m}
     \end{aligned}
     \end{align}
 where $T_i$ is a $C^{\infty}$ diffeomorphism $T_i: M_i \to M_{i+1}$ and $M_i \subset \R$.
@@ -201,7 +209,10 @@ Given $\bm x_i \in M_i$, the Jacobian matrix of $T$ is
 \end{align}
 Let us denote the product in the right-hand of equation as $\jac_{m-1}$, and we have
 \begin{align}
-    \jac_{m-1} = \pderiv{T_{m-1}}{\bm x_{m-1}}\, \jac_{m-2},
+    \begin{aligned}
+        \jac_{m-1} &= \pderiv{T_{m-1}}{\bm x_{m-1}}\, \jac_{m-2}
+        & \in M_{m} \otimes M_0^*,
+    \end{aligned}
     \label{eq:jac}
 \end{align}
 for $m \ge 2$.
@@ -221,19 +232,46 @@ Hessian tensor of $T$ is available by differentiating Eq. (\ref{eq:jac}),
 \end{align}
 Rewriting the derivative of $\jac_{m-1}$ by $\hes_{m-1}$, we get
 \begin{align}
-    \hes_{m-1} =
-    \parens{
-        \pderiv[2]{T_{m-1}}{\bm x_{m-1}}\,
+    \begin{aligned}
+        \hes_{m-1} &=
+        \parens{
+            \pderiv[2]{T_{m-1}}{\bm x_{m-1}}\,
+            \jac_{m-2}
+        }
         \jac_{m-2}
-    }
-    \jac_{m-2}
-    +
-    \pderiv{T_{m-1}}{\bm x_{m-1}}
-    \hes_{m-2}
+        +
+        \pderiv{T_{m-1}}{\bm x_{m-1}}
+        \hes_{m-2} & \in M_m \otimes M_0^* \otimes M_0^*
+    \end{aligned}
+    .\label{eq:hes}
 \end{align}
 Notice that $\parens{\jac_{m-2}\, \jac_{m-2}}$ is sometimes not $\jac_{m-2}^2$
-because the dimensions of $M_{i}$ and $M_{i+1}^*$
-are not necessarily equal.
+because the dimensions of $M_{i}$ and $M_{i+1}^*$ are not necessarily equal.
+
+In the Python implementation with NumPy, one can write Eqs. (\ref{eq:jac}) and (\ref{eq:hes})
+in oneline coding, as shown in Lst. \ref{lst:jaches_multi}.
+Remember that the listing is just an example of calculation ways
+but is not directly implemented in the package.
+In the example, we assume the composite map composed of 8 mappings which have random dimensions.
+The code implements the calculation of Eqs. (\ref{eq:jac}) and Eqs. (\ref{eq:hes})
+using dummy values of Jacobian matrices and Hessian tensors.
+The output example included below implies the dimension correspondence
+before and after the calculation.
+All Jacobian matrices transform from $M_i \otimes M_0^*$ to $M_{i+1} \otimes M_0^*$;
+all Hesssian tensors do from $M_0^* \otimes M_{i} \otimes M_0^*$ to
+$M_0^* \otimes M_{i+1} \otimes M_0^*$.
+Notice that we swap the axes of the Hessian tensor from $M_{i} \otimes M_0^* \otimes M_0^*$
+to $M_0^* \otimes M_{i} \otimes M_0^*$, to simplify the code of the recurrence relation.
+\begin{center}
+    \lstinputlisting[%
+    firstline=21,
+    language=python,
+    caption={Example implementation of the recurrence relations (\ref{eq:jac}) and (\ref{eq:hes}).},
+    label={lst:jaches_multi}%
+    ]{composite.py}
+\end{center}
+
+
 \clearpage
 \section{Derivative of a map for the continuous-time systems}
 Consider a $C^{\infty}$ autonomous dynamical system
@@ -245,8 +283,8 @@ Consider a $C^{\infty}$ autonomous dynamical system
     \end{aligned}
     \label{eq:sys}
 \end{align}
-where $M$ is a state space, and $\bm f$ is a function such that $M \to \R^n$.
-We write the trajectory of the system (\ref{eq:sys}) by $\traj: \R \times M \to M$,
+where $M$ is a state space, and $\bm f$ is a function such that $M \to X \subset \R^n$.
+We write the trajectory of the system (\ref{eq:sys}) by $\traj: X \times M \to M$,
 where $\traj(0, \bm x_0) = \bm x_0$ is the initial state
 and $\traj(t, \bm x_0)$ is the state at $t$.
 Let $\parm$ be an $n-1$ dimensional manifold defined by
@@ -266,17 +304,28 @@ Then, the Jacobian matrix of $T_0$ is described by
     \brackets{
         I -
         \frac{1}{\deriv{q}{\bm x} \bm f(\bm x)}
-        \bm f(\bm x) \deriv{q}{\bm x}
+        \parens{\bm f(\bm x) \otimes \deriv{q}{\bm x}}
     }
     \right|_{\bm x = \bm x_1}
     \pderiv{\traj}{\bm x_0}(\tau)
     =
     B(\bm x_1) \pderiv{\traj}{\bm x_0}(\tau),
 \end{align}
-where $\tau$ is the spent time during the trajectory $\traj$
+where $I$ is an identity matrix, $\tau$ is the spent time during the trajectory $\traj$
 moves from $\bm x_0$ to the boundary $\parm$, which only depends on $\bm x_0$,
 and $\bm x_1 = \traj(\tau, \bm x_0)$.
-The Hessian tensor of $T_0$ is
+The partial derivative of the trajectory with respect to the initial state
+at the time $t$ is the solution of the following ordinary differential equation
+\begin{align}
+    \begin{aligned}
+        \deriv{}{t}
+        \parens{\pderiv{\traj}{\bm x_0}}
+        &= \deriv{\bm f}{\bm x} \pderiv{\traj}{\bm x_0},
+        & \deriv{\traj}{\bm x_0}(0) = I.
+    \end{aligned}
+\end{align}
+
+The Hessian tensor of $T_0$ is the derivative of $\jac_{T_0}$ with respect to the initial state
 \begin{align}
     \begin{aligned}
         \hes_{T_0}
@@ -315,220 +364,47 @@ where
         }
         \deriv{q}{\bm x} \bm f(\bm x)
         -
-        \parens{\bm f(\bm x) \deriv{q}{\bm x}} \otimes
+        \parens{\bm f(\bm x) \otimes \deriv{q}{\bm x}} \otimes
         \parens{
             \deriv[2]{q}{\bm x} \bm f(\bm x)
             +
             \deriv{q}{\bm x} \deriv{\bm f}{\bm x}
         }
-    },
+    }.
 \end{align}
-since
+Notice that
 \begin{align}
     \begin{aligned}
         B &\in X \otimes X^* ,&
-        \pderiv{B}{\bm x} &\in X \otimes X^* \otimes X^*,\\
-        \deriv{q}{\bm x}&\in X^*, &
-        \deriv[2]{q}{\bm x} & \in X^* \otimes X^*,\\
-        \bm f(\bm x) &\in X, &
-        \deriv{\bm f}{\bm x} &\in X \otimes X^*.
+        \pderiv{B}{\bm x} &\in X \otimes X^* \otimes X^*, &
+        \deriv{q}{\bm x}&\in X^*, \;
+        \deriv[2]{q}{\bm x} \in X^* \otimes X^*, &
+        \bm f(\bm x) &\in X, \;
+        \deriv{\bm f}{\bm x} \in X \otimes X^*,\\
+        \jac_{T_0} &\in X \otimes M^*, & \pderiv{\traj}{\bm x_0} & \in X \otimes M^*, &
+        \pderiv[2]{\traj}{\bm x_0} &\in X \otimes M^* \otimes M^*, &
+        \hes_{T_0} &\in X \otimes M^* \otimes M^*.
     \end{aligned}
 \end{align}
-
-On the other hand,
-\begin{align}
-    \deriv{}{t}
-    \parens{\pderiv{\traj}{\bm x_0}}
-    &= \deriv{\bm f}{\bm x} \pderiv{\traj}{\bm x_0}\\
-    \deriv{}{t}
-    \parens{\pderiv[2]{\traj}{\bm x_0}}
-    &=
-    \parens{\deriv[2]{\bm f}{\bm x} \pderiv{\traj}{\bm x_0}}
-    \pderiv{\traj}{\bm x_0}
-    +
-    \deriv{\bm f}{\bm x} \pderiv[2]{\traj}{\bm x_0},
-\end{align}
-where
+The second partial derivative of $\traj$ with respect to $\bm x_0$ is the solution of the following
+ordinary differential equation
 \begin{align}
     \begin{aligned}
-        \deriv[2]{\bm f}{\bm x} \pderiv{\traj}{\bm x_0}
-        &= \tr_{34} \parens{
-            \deriv[2]{\bm f}{\bm x} \otimes \pderiv{\traj}{\bm x_0}
-        },
-        &
-        \deriv{\bm f}{\bm x} \pderiv[2]{\traj}{\bm x_0}
+        \deriv{}{t}
+        \parens{\pderiv[2]{\traj}{\bm x_0}}
         &=
-        \tr_{23} \parens{
-            \deriv{\bm f}{\bm x} \otimes \pderiv[2]{\traj}{\bm x_0}
-        }.
+        \parens{\deriv[2]{\bm f}{\bm x} \pderiv{\traj}{\bm x_0}}
+        \pderiv{\traj}{\bm x_0}
+        +
+        \deriv{\bm f}{\bm x} \pderiv[2]{\traj}{\bm x_0},
+        &
+        \pderiv[2]{\traj}{\bm x_0} = \bm 0,
     \end{aligned}
 \end{align}
-
-\clearpage
+where $\bm 0$ is a tensor with all elements of zeros, and
 \begin{align}
-    &\begin{aligned}
-        \pderiv{T_0}{\bm x_0}
-        &= \pderiv{\traj}{\bm x_0}
-        + \bm f(\bm x_1) \pderiv{\tau}{\bm x_0}
-        \\
-        \pderiv{\tau}{\bm x_0}
-        &=
-        - \frac{1}{\deriv{q}{\bm x} \bm f(\bm x_1)} \deriv{q}{\bm x} \pderiv{\traj}{\bm x_0}
-        \\
-        \pderiv{T_0}{\bm x_0}
-        &=
-        \brackets{
-            I - \frac{1}{\deriv{q}{\bm x} \bm f(\bm x_1)} \bm f(\bm x_1) \deriv{q}{\bm x}
-        } \pderiv{\traj}{\bm x_0}
-        = B(\bm x_1) \pderiv{\traj}{\bm x_0}
-    \end{aligned}
-    \\[20pt]
-    &\begin{aligned}
-        \pderiv[2]{T_0}{\bm x_0} &=
-        \pderiv[2]{\traj}{\bm x_0}
-        +
-        \parens{
-            \deriv{\bm f}{\bm x}
-            \pderiv{\traj}{\bm x_0}
-        } \otimes
-        \pderiv{\tau}{\bm x_0}
-        +
-        \bm f(\bm x_1) \otimes
-        \pderiv[2]{\tau}{\bm x_0}
-        \\
-        \pderiv[2]{\tau}{\bm x_0} &=
-        - \frac{1}{
-            \parens{\deriv{q}{\bm x}\bm f(\bm x_1)}^2
-        }
-        \brackets{
-            \pderiv{}{\bm x_0}\parens{\deriv{q}{\bm x}\pderiv{\traj}{\bm x_0}}
-            \deriv{q}{\bm x} \bm f(\bm x_1)
-            -
-            \parens{\deriv{q}{\bm x}\pderiv{\traj}{\bm x_0}} \otimes
-            \pderiv{}{\bm x_0}\parens{
-                \deriv{q}{\bm x} \bm f(\bm x_1)
-            }
-        }
-        \\
-        &=
-        - \frac{1}{
-            \parens{\deriv{q}{\bm x}\bm f(\bm x_1)}^2
-        }
-        \braces{
-            \brackets{
-            \parens{\deriv[2]{q}{\bm x}\pderiv{\traj}{\bm x_0}}
-            \pderiv{\traj}{\bm x_0}
-            +
-            \deriv{q}{\bm x}\pderiv[2]{\traj}{\bm x_0}
-            }
-            \deriv{q}{\bm x} \bm f(\bm x_1)
-            -
-            \parens{\deriv{q}{\bm x}\pderiv{\traj}{\bm x_0}}\otimes
-            \brackets{
-                \parens{
-                    \deriv[2]{q}{\bm x}\pderiv{\traj}{\bm x_0}
-                }
-                \bm f(\bm x_1)
-                +
-                \deriv{q}{\bm x}
-                \parens{\deriv{\bm f}{\bm x} \pderiv{\traj}{\bm x_0}}
-            }
-        }
-        \\
-        &=
-        - \frac{1}{
-            {\deriv{q}{\bm x}\bm f(\bm x_1)}
-        }
-        \brackets{
-            \parens{\deriv[2]{q}{\bm x}\pderiv{\traj}{\bm x_0}}
-            \pderiv{\traj}{\bm x_0}
-            +
-            \deriv{q}{\bm x}\pderiv[2]{\traj}{\bm x_0}
-            }
-        + \frac{1}{
-            \parens{\deriv{q}{\bm x}\bm f(\bm x_1)}^2
-        }
-        \parens{\deriv{q}{\bm x}\pderiv{\traj}{\bm x_0}}\otimes
-        \brackets{
-            \parens{
-                \deriv[2]{q}{\bm x}\pderiv{\traj}{\bm x_0}
-            }
-            \bm f(\bm x_1)
-            +
-            \deriv{q}{\bm x}
-            \parens{\deriv{\bm f}{\bm x} \pderiv{\traj}{\bm x_0}}
-        }
-        \\
-        \pderiv[2]{T_0}{\bm x_0}
-        &= B(\bm x_1) \pderiv[2]{\traj}{\bm x_0}
-        - \frac{1}{\deriv{q}{\bm x} \bm f(\bm x_1)}
-        \brackets{
-            \parens{
-                \deriv{\bm f}{\bm x}
-                \pderiv{\traj}{\bm x_0}
-            }
-            \otimes \deriv{q}{\bm x}
-            +
-            \bm f(\bm x_1) \otimes \parens{\deriv[2]{q}{\bm x}\pderiv{\traj}{\bm x_0}}
-        } \pderiv{\traj}{\bm x_0}
-        \\
-        &\qquad
-        + \frac{1}{
-            \parens{\deriv{q}{\bm x}\bm f(\bm x_1)}^2
-        } \bm f(\bm x_1) \otimes
-        \parens{\deriv{q}{\bm x}\pderiv{\traj}{\bm x_0}}\otimes
-        \brackets{
-            \parens{
-                \deriv[2]{q}{\bm x}\pderiv{\traj}{\bm x_0}
-            }
-            \bm f(\bm x_1)
-            +
-            \deriv{q}{\bm x}
-            \parens{\deriv{\bm f}{\bm x} \pderiv{\traj}{\bm x_0}}
-        }
-        \\
-        &= B(\bm x_1) \pderiv[2]{\traj}{\bm x_0}
-        - \frac{1}{\deriv{q}{\bm x} \bm f(\bm x_1)}
-        \brackets{\parens{
-            \deriv{\bm f}{\bm x}
-            \otimes \deriv{q}{\bm x}
-            +
-            \bm f(\bm x_1) \otimes \deriv[2]{q}{\bm x}
-        }\pderiv{\traj}{\bm x_0}}  \pderiv{\traj}{\bm x_0}
-        \\
-        &\qquad
-        + \frac{1}{
-            \parens{\deriv{q}{\bm x}\bm f(\bm x_1)}^2
-        }
-        \parens{\bm f(\bm x_1) \deriv{q}{\bm x}}\otimes
-        \brackets{\parens{
-            \deriv[2]{q}{\bm x} \bm f(\bm x_1)
-            +
-            \deriv{q}{\bm x} \deriv{\bm f}{\bm x}
-        }\pderiv{\traj}{\bm x_0}} \pderiv{\traj}{\bm x_0}
-        \\
-        &= B(\bm x_1) \pderiv[2]{\traj}{\bm x_0}
-        \\
-        &\quad
-        - \frac{1}{\parens{\deriv{q}{\bm x} \bm f(\bm x_1)}^2}
-        \braces{\brackets{\parens{
-            \deriv{\bm f}{\bm x}
-            \otimes \deriv{q}{\bm x}
-            +
-            \bm f(\bm x_1) \otimes \deriv[2]{q}{\bm x}
-        }
-        \deriv{q}{\bm x} \bm f(\bm x_1)
-        -
-        \parens{\bm f(\bm x_1) \deriv{q}{\bm x}}\otimes
-        \parens{
-            \deriv[2]{q}{\bm x} \bm f(\bm x_1)
-            +
-            \deriv{q}{\bm x} \deriv{\bm f}{\bm x}
-        }}\pderiv{\traj}{\bm x_0}} \pderiv{\traj}{\bm x_0}
-        \\
-        &=
-        B(\bm x_1) \pderiv[2]{\traj}{\bm x_0} +
-        \parens{\deriv{B}{\bm x} \pderiv{\traj}{\bm x_0}} \pderiv{\traj}{\bm x_0}
+    \begin{aligned}
+        \deriv[2]{\bm f}{\bm x} \in X \otimes X^* \otimes X^*.
     \end{aligned}
 \end{align}
 
