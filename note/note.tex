@@ -6,6 +6,30 @@
 \usepackage{amsmath}
 \usepackage{ifthen}
 \usepackage{xcolor}
+\usepackage{listings}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolor}{rgb}{0.95,0.95,0.92}
+\lstdefinestyle{code}{
+    backgroundcolor=\color{backcolor},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2,
+    frame=trBL,
+    xleftmargin=.1\hsize, xrightmargin=.1\hsize,
+    abovecaptionskip=12pt
+}
+\lstset{style=code}
 
 \title{Fundamentals on the package}
 \author{Yuu Miino}
@@ -31,7 +55,8 @@
 
 \begin{document}
 \maketitle
-\section{Derivatives of the composite map}
+\section{Derivatives of a composite map}
+\subsection{Singly composite map}
 Let $V$, $W$, and $X$ be vector spaces over $\R$,
 and $f$ and $g$ be diffeomorphisms defined by
 \begin{align}
@@ -63,7 +88,9 @@ On the other hand, a composite map $g\circ f$ is described as
 \end{align}
 From the chain-rule, the Jacobian matrix of $g\circ f$ is
 \begin{align}
-    \jac_{g\circ f} = \jac_g \jac_f \in X \otimes V^*.
+    \begin{aligned}
+        \jac_{g\circ f} &= \jac_g \jac_f  &\in X \otimes V^*.
+    \end{aligned}
     \label{eq:jacgf}
 \end{align}
 In the context of the tensor, Eq. (\ref{eq:jacgf}) is equivalent to
@@ -82,7 +109,7 @@ where
     \end{aligned}
 \end{align}
 We write the $(i, j)$ contraction of a tensor by $\tr_{ij}$,
-which is a generalization of the trace.
+which is also known as a generalization of the trace.
 The Hessian tensor of $g\circ f$ is an element of
 $X \otimes V^* \otimes V^*$.
 From the chain-rule, we have
@@ -111,11 +138,21 @@ where
         \jac_g \hes_f &= \tr_{23}\parens{\jac_g \otimes \hes_f},\\
         \jac_g \otimes \hes_f &\in (X \otimes W^*) \otimes (W \otimes V^* \otimes V^*),\\
         \tr_{23} &: (X \otimes W^*) \otimes (W \otimes V^* \otimes V^*) \to
-        X \otimes V^* \otimes V^*,
+        X \otimes V^* \otimes V^*.
     \end{aligned}
 \end{align}
 
+In the Python implementation with NumPy, an ``@'' operator (equivalently ``numpy.matmul'') works well
+to shorten the calculation code of some contractions.
 
+\begin{center}
+    \lstinputlisting[language=python, caption={Example usage of ``@'' operator.}]{contraction.py}
+\end{center}
+
+Note that the ``@'' operator just calculates the matrix multiplication of two matrices,
+which compose of the last two axes of the target tensors, for each index of the other axes.
+
+\subsection{Multiply composite map}
 Let $T$ be a composite map of $T_i$
 \begin{align}
     \begin{aligned}
