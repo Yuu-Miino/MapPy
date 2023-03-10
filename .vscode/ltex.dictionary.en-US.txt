@@ -1,6 +1,0 @@
-diffeomorphisms
-Jacobian
-Miino
-Yuu
-Eq
-diffeomorphism

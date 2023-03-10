@@ -132,25 +132,58 @@ where
         \parens{\hes_g \jac_f} \jac_f &= \tr_{24}\parens{\parens{\hes_g \jac_f} \otimes \jac_f},\\
         \tr_{24} &: \parens{X \otimes W^* \otimes V^*} \otimes \parens{W \otimes V^*}
         \to X \otimes V^* \otimes V^*,
-    \end{aligned}
+    \end{aligned}\label{eq:hjj}
     \\[15pt]
     \begin{aligned}
         \jac_g \hes_f &= \tr_{23}\parens{\jac_g \otimes \hes_f},\\
         \jac_g \otimes \hes_f &\in (X \otimes W^*) \otimes (W \otimes V^* \otimes V^*),\\
         \tr_{23} &: (X \otimes W^*) \otimes (W \otimes V^* \otimes V^*) \to
         X \otimes V^* \otimes V^*.
-    \end{aligned}
+    \end{aligned}\label{eq:jh}
 \end{align}
 
 In the Python implementation with NumPy, an ``@'' operator (equivalently ``numpy.matmul'') works well
 to shorten the calculation code of some contractions.
+Listing \ref{lst:atop} shows the example usage.
+The option \texttt{axes = 0} makes the function return the tensor product of specified tensors.
 
 \begin{center}
-    \lstinputlisting[language=python, caption={Example usage of ``@'' operator.}]{contraction.py}
+    \lstinputlisting[%
+        firstline=1, lastline=18,
+        language=python,
+        caption={Example usage of ``@'' operator.},
+        label={lst:atop}%
+    ]{contraction.py}
 \end{center}
 
 Note that the ``@'' operator just calculates the matrix multiplication of two matrices,
-which compose of the last two axes of the target tensors, for each index of the other axes.
+which compose of the last two indices of the target tensors, for each index of the other axes.
+Hence, we cannot directly use ``@'' operator with Eq. (\ref{eq:hjj}) and Eq. (\ref{eq:jh}).
+In the cases, we can use ``@'' operator after swapping the axes of the tensors,
+as shown in Lsts. \ref{lst:atop_swap1} and \ref{lst:atop_swap2}.
+\begin{center}
+    \lstinputlisting[%
+        firstline=20, lastline=26,
+        language=python,
+        caption={Example usage of ``@'' operator after axes swapping (for Eq. (\ref{eq:hjj})).},
+        label={lst:atop_swap1}%
+    ]{contraction.py}
+\end{center}
+As commented in Lst. \ref{lst:atop_swap2},
+the ``@'' operation between a matrix \texttt{Jg} and a tensor \texttt{Hf.transpose(1, 0, 2)} raise unexpected result
+in the mathematical sence.
+The operator yields $V^* \otimes X \otimes V^*$ from $(X\otimes W^*)$ and $(V^* \otimes W \otimes V^*)$
+because it just calculates the matrix product $X \otimes V^*$ from
+$X\otimes W^*$ and $W\otimes V^*$ for each element in $V^*$.
+We can revert the order by \texttt{transpose} method again.
+\begin{center}
+    \lstinputlisting[%
+        firstline=28, lastline=39,
+        language=python,
+        caption={Example usage of ``@'' operator after axes swapping (for Eq. (\ref{eq:jh})).},
+        label={lst:atop_swap2}%
+    ]{contraction.py}
+\end{center}
 
 \subsection{Multiply composite map}
 Let $T$ be a composite map of $T_i$
