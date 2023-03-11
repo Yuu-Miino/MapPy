@@ -1,5 +1,6 @@
 import numpy as np
-from hds import DictVector, ContinuousMode as CM, DiscreteMode as DM, solve_ivbmp
+from hds import ContinuousMode as CM, DiscreteMode as DM, solve_ivbmp
+from hds.tools import DictVector
 
 class Parameter(DictVector):
     a: float = 0.2
@@ -93,8 +94,8 @@ def main ():
 
     mode0 = DM(p, jac_fun=p_jac, hes_fun=p_hes)
     mode1 = CM(izhikevich, borders=[fire_border],
-            jac_fun=izhikevich_jac, hes_fun=izhikevich_hes,
-            jac_border= [fire_border_dy], hes_border=[fire_border_dy2])
+        jac_fun=izhikevich_jac, hes_fun=izhikevich_hes,
+        jac_border= [fire_border_dy], hes_border=[fire_border_dy2])
     mode2 = DM(jump, jac_fun=jump_jac, hes_fun=jump_hes)
     mode3 = DM(pinv, jac_fun=pinv_jac, hes_fun=pinv_hes)
 

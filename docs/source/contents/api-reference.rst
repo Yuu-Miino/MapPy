@@ -6,8 +6,9 @@ API Reference
 
 .. toctree::
     :maxdepth: 2
+    :caption: API defenitions
+    :titlesonly:
 
-    ../../modules/hds
-
-
+    api-reference/root
+    api-reference/tools
 

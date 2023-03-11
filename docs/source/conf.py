@@ -21,12 +21,14 @@ release = '0.0.1'
 extensions = [
     'sphinx.ext.autodoc',
 #    'sphinx.ext.autosummary',
+    'sphinx_automodapi.automodapi',
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
-    'sphinx_design'
+    'sphinx_design',
+    'sphinx_multiversion'
 ]
-
-# autosummary_generate = True
+# autosummary_generate=True
+autodoc_typehints = "none"
 
 templates_path = ['_templates']
 exclude_patterns = []
@@ -49,9 +51,11 @@ html_theme_options = {
     }
 }
 
+html_list = ["search-field.html", "sidebar-nav-bs.html", "versioning.html"]
 html_sidebars = {
-    "contents/**": ["search-field.html", "sidebar-nav-bs.html"],
-    "modules/*": ["search-field.html", "sidebar-nav-bs.html"],
+    "contents/**": html_list,
+    "modules/*": html_list,
+    "api/*": html_list
 }
 
 mathjax3_config = {
@@ -68,3 +72,7 @@ mathjax3_config = {
         }
     }
 }
+
+# -- Options for sphinx-multiversion -----------------------------------------
+# smv_tag_whitelist = r'^\d+\.\d+$'
+# smv_branch_whitelist = r'^main$'

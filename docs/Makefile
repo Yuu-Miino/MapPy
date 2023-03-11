@@ -19,13 +19,13 @@ help:
 %: Makefile
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-.PHONY: sphinx-apidoc
-sphinx-apidoc:
-	sphinx-apidoc -f -o source/modules -M "../hds/"
-	rm source/modules/modules.rst
+# .PHONY: sphinx-apidoc
+# sphinx-apidoc:
+#	sphinx-apidoc -Mf -o source/modules -M "../hds/"
+#	rm source/modules/modules.rst
 
 .PHONY: html
-html: sphinx-apidoc # ds_mode
+html: # sphinx-apidoc # ds_mode
 	$(SPHINXBUILD) -b html "$(SOURCEDIR)" "$(BUILDDIR)/html"
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."

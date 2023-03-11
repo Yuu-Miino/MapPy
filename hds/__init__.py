@@ -1,5 +1,6 @@
-from .__classes__ import ContinuousMode, DiscreteMode, ModeStepResult, Mode, DictVector
-from .__main__ import solve_ivbmp, SolveIvbmpResult
+"""Fundamental package to investigate limit cycle
+"""
+from hds._fundamentals import *
 
 __all__ = [
     "solve_ivbmp",
@@ -8,5 +9,8 @@ __all__ = [
     "DiscreteMode",
     "ModeStepResult",
     "Mode",
-    "DictVector"
+    "JacDimErr",
+    "HesDimErr",
+    "SomeJacUndefined",
+    "SomeHesUndefined"
 ]
