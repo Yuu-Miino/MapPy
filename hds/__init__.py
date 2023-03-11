@@ -3,12 +3,12 @@
 from hds._fundamentals import *
 
 __all__ = [
-    "solve_ivbmp",
-    "SolveIvbmpResult",
+    "Mode",
     "ContinuousMode",
     "DiscreteMode",
     "ModeStepResult",
-    "Mode",
+    "solve_ivbmp",
+    "SolveIvbmpResult",
     "JacDimErr",
     "HesDimErr",
     "SomeJacUndefined",
