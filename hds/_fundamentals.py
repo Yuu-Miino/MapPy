@@ -2,12 +2,14 @@
 """
 from typing import Concatenate, ParamSpec, TypeVar
 from collections.abc import Callable
+from functools import wraps
 import numpy
 from scipy.integrate import solve_ivp, OdeSolution
 numpy.set_printoptions(precision=12)
 
 __all__ = [
     "solve_ivbmp",
+    "PoincareMap",
     "SolveIvbmpResult",
     "ContinuousMode",
     "DiscreteMode",
@@ -72,6 +74,21 @@ class HesDimErr (Exception):
             'Please check `dim` and `fun` passed to the mode.'
         )
 
+class TransitionKeyError (Exception):
+    """Exception for the undefined transition
+    """
+    def __init__(self, current_mode: str) -> None:
+        self.current_mode = current_mode
+    def __str__(self) -> str:
+        return (f'[Transition] Transition rule of `{self.current_mode}` is undefined.')
+class AllModesKeyError (Exception):
+    """Exception for the undefined mode
+    """
+    def __init__(self, modename: str) -> None:
+        self.modename = modename
+    def __str__(self) -> str:
+        return (f'[All modes] Mode with name `{self.modename}` is undefined.')
+
 class ModeStepResult:
     """Result of `step` in `Mode`
 
@@ -117,18 +134,18 @@ class Mode:
     """Parent Class of all modes
     """
     def __init__(self,
+        name: str,
         fun: Callable[Concatenate[Y, P], YF],
         jac_fun: Callable[Concatenate[Y, P], YJ] | None = None,
         hes_fun: Callable[Concatenate[Y, P], YH] | None = None
     ) -> None:
+        self.name = name
         self.fun = fun
         self.jac_fun = jac_fun
         self.hes_fun = hes_fun
-
-    def __eq__(self, other):
-        if not isinstance(other, Mode):
-            return NotImplemented
-        return id(self) == id(other)
+    def __hash__(self): return hash(id(self))
+    def __eq__(self, x): return x is self
+    def __ne__(self, x): return x is not self
 
     def step(self, y0: numpy.ndarray | float, args = None, **options) -> ModeStepResult:
         """Step to the next mode
@@ -154,6 +171,8 @@ class ContinuousMode (Mode):
 
     Parameters
     ----------
+    name : str
+        Name of the mode.
     fun : Callable
         Right-hand side of the continuous-time dynamical system. The calling signature is fun(y).
     borders: list of callables
@@ -173,12 +192,9 @@ class ContinuousMode (Mode):
         The function `solve_ivp` of SciPy takes `t_span = [0, max_interval]`.
 
     """
-    next: list[Mode]
-    """List of the next modes after arriving `borders`.
-    The index of `next` must correspond with the index of `borders`.
-    """
 
     def __init__(self,
+        name: str,
         fun: Callable[Concatenate[Y, P], YF],
         borders: list[Callable[Concatenate[Y, P], float]],
         jac_fun: Callable[Concatenate[Y, P], YJ] | None = None,
@@ -187,7 +203,7 @@ class ContinuousMode (Mode):
         hes_border: list[Callable[Concatenate[Y, P], YBH]] | None = None,
         max_interval: float = float(20),
     ) -> None:
-        super().__init__(fun, jac_fun, hes_fun)
+        super().__init__(name, fun, jac_fun, hes_fun)
         self.max_interval = max_interval
         self.borders = borders
         self.jac_border = jac_border
@@ -262,10 +278,11 @@ class ContinuousMode (Mode):
             Decorated `fun` function compatible with `ContinousTimeMode`
         """
         def _decorator(fun: Callable[P, YF]) -> Callable[P, YF]:
+            @wraps(fun)
             def _wrapper(*args: P.args, **kwargs: P.kwargs) -> YF:
                 ret = fun(*args, **kwargs)
                 return ret
-            _wrapper.dom_dim = dimension
+            setattr(_wrapper, 'dom_dim', dimension)
             return _wrapper
         return _decorator
 
@@ -285,10 +302,11 @@ class ContinuousMode (Mode):
             Decorated `border` function compatible with `ContinuousTimeMode`
         """
         def _decorator(fun: Callable[P, YF]) -> Callable[P, YF]:
+            @wraps(fun)
             def _wrapper(*args: P.args, **kwargs: P.kwargs) -> YF:
                 ret = fun(*args, **kwargs)
                 return ret
-            _wrapper.direction = direction
+            setattr(_wrapper, 'direction', direction)
             return _wrapper
         return _decorator
 
@@ -417,6 +435,8 @@ class DiscreteMode (Mode):
 
     Parameters
     ----------
+    name: str
+        Name of the mode.
     fun : Callable
         Right-hand side of the discrete-time dynamical system. The calling signature is fun(y).
     jac_fun : Callable or None, optional
@@ -424,16 +444,14 @@ class DiscreteMode (Mode):
     hes_fun : Callable or None, optional
         Hessian tensor of the right-hand side of the system with respect to y, by default `None`.
     """
-    next: Mode
-    """Next modes after the mapping.
-    """
 
     def __init__(self,
+        name: str,
         fun: Callable[Concatenate[Y, P], YF],
         jac_fun: Callable[Concatenate[Y, P], YJ] | None = None,
         hes_fun: Callable[Concatenate[Y, P], YH] | None = None
     ) -> None:
-        super().__init__(fun, jac_fun, hes_fun)
+        super().__init__(name, fun, jac_fun, hes_fun)
 
     @classmethod
     def function(cls, domain_dimension: int, codomain_dimenstion: int) -> Callable:
@@ -452,11 +470,12 @@ class DiscreteMode (Mode):
             Decorated function compatible with `DiscreteTimeMode`
         """
         def _decorator(fun: Callable[P, YF]) -> Callable[P, YF]:
+            @wraps(fun)
             def _wrapper(*args: P.args, **kwargs: P.kwargs) -> YF:
                 ret = fun(*args, **kwargs)
                 return ret
-            _wrapper.dom_dim = domain_dimension
-            _wrapper.cod_dim = codomain_dimenstion
+            setattr(_wrapper, 'dom_dim', domain_dimension)
+            setattr(_wrapper, 'cod_dim', codomain_dimenstion)
             return _wrapper
         return _decorator
 
@@ -541,6 +560,8 @@ class SolveIvbmpResult:
     ----------
     y : numpy.ndarray or float
         The value of state after mapping.
+    trans_history:
+        Transition history of the modes by index of `all_modes`.
     jac: numpy.ndarray, float, or None, optional
         Jacobian matrix of the map, by default `None`.
     eigvals: numpy.ndarray, float or None, optional
@@ -552,12 +573,14 @@ class SolveIvbmpResult:
     """
     def __init__(self,
         y: numpy.ndarray | float,
+        trans_history: list[str],
         jac: numpy.ndarray | float | None = None,
         eigvals: numpy.ndarray | float | None = None,
         eigvecs: numpy.ndarray | None = None,
         hes: numpy.ndarray | float | None = None,
     ) -> None:
         self.y = y
+        self.trans_history = trans_history
         self.jac = jac
         self.hes = hes
         self.eigvals = eigvals
@@ -579,8 +602,10 @@ class SomeHesUndefined(Exception):
 
 def solve_ivbmp(
     y0: numpy.ndarray | float,
-    initial_mode: Mode,
-    end_mode: Mode | None = None,
+    all_modes: tuple[Mode, ...],
+    trans: dict[str, str | list[str]],
+    initial_mode: str,
+    end_mode: str | None = None,
     calc_jac: bool = True,
     calc_hes: bool = False,
     args = None,
@@ -592,17 +617,21 @@ def solve_ivbmp(
     Parameters
     ----------
     y0 : numpy.ndarray or float
-        The initial value y0.
-    initial_mode : Mode
-        The initial mode. It also plays the role of Poincaré section since the function solves the boundary modes problem.
+        Initial value y0.
+    all_modes: tuple of Modes
+        Set of all modes.
+    trans: dict
+        Transition function that maps from `current mode` to `next mode`.
+    initial_mode : str
+        Name of the initial mode.
     end_mode: Mode or None, optional
-        The end mode, by default `None`. If `None`, the end mode in the method is the same as `initial_mode`.
+        Name of the end mode, by default `None`. If `None`, the end mode in the method is the same as `initial_mode`.
     calc_jac : bool, optional
         Flag to calculate the Jacobian matrix, by default `True`.
     calc_hes : bool, optional
         Flag to calculate the Hessian tensor, by default `True`.
     args : Any, optional
-        The parameter to pass to `fun` in all `mode`, by default None.
+        Parameter to pass to `fun` in all `mode`, by default None.
     rtol : float, optional
         Relative torelance to pass to `solve_ivp`, by default `1e-6`.
     map_count : int, optional
@@ -618,11 +647,29 @@ def solve_ivbmp(
         Error of not implemented Jacobian matrix calculation.
     SomeHesUndefined
         Error of not implemented Hessian tensor calculation.
+    TransitionKeyError
+        Error of undefined transition rule.
+    AllModesKeyError
+        Error of undefined mode.
     """
     result = None
-    current_mode = initial_mode
+    mdi = [m.name for m in all_modes]
+    trans_history: list[str] = []
+    try:
+        _ = mdi.index(initial_mode)
+    except KeyError as e:
+        raise AllModesKeyError(initial_mode) from e
+    current_mode: Mode = all_modes[mdi.index(initial_mode)]
+    trans_history.append(initial_mode)
+
     if end_mode is None:
         end_mode = initial_mode
+    else:
+        try:
+            _ = mdi.index(end_mode)
+        except KeyError as e:
+            raise AllModesKeyError(end_mode)
+
     jac = None
     hes = None
     count = 0
@@ -650,15 +697,23 @@ def solve_ivbmp(
                 else:
                     raise SomeJacUndefined
 
-            if isinstance(current_mode, ContinuousMode):
-                if result.i_border is not None:
-                    current_mode = current_mode.next[result.i_border]
-            elif isinstance(current_mode, DiscreteMode):
-                current_mode = current_mode.next
-            else:
-                pass
+            try:
+                next = trans[current_mode.name]
+                if isinstance(next, list):
+                    if result.i_border is None:
+                        raise KeyError
+                    next = next[result.i_border]
+            except KeyError as e:
+                raise TransitionKeyError(current_mode.name) from e
+
+            try:
+                current_mode = all_modes[mdi.index(next)]
+            except KeyError as e:
+                raise AllModesKeyError(next)
+            trans_history.append(next)
+
             count += 1
-            if current_mode == end_mode:
+            if current_mode.name == end_mode:
                 break
 
     eigs = None
@@ -676,4 +731,33 @@ def solve_ivbmp(
         else:
             hes = numpy.squeeze(hes)
 
-    return SolveIvbmpResult( y0, jac, eigs, eigv, hes )
+    return SolveIvbmpResult( y0, trans_history, jac, eigs, eigv, hes)
+
+class PoincareMap():
+    def __init__(self,
+        all_modes: tuple[Mode, ...],
+        trans: dict[str, str | list[str]],
+        initial_mode: str,
+        calc_jac: bool = False,
+        calc_hes: bool = False,
+        args = None,
+        **options
+    ) -> None:
+        self.all_modes = all_modes
+        self.trans = trans
+        self.initial_mode = initial_mode
+        self.calc_jac = calc_jac
+        self.calc_hes = calc_hes
+        self.args = args
+        self.options = options
+
+    def image(self,
+        y0: numpy.ndarray | float,
+        iterations: int = 1
+    ):
+        slv = solve_ivbmp(
+            y0, self.all_modes, self.trans,
+            self.initial_mode, end_mode= self.initial_mode,
+            calc_jac=self.calc_jac, calc_hes=self.calc_hes,
+            args=self.args, map_count=iterations, **self.options)
+        return slv

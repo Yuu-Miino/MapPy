@@ -9,6 +9,7 @@ __all__ = [
     "ModeStepResult",
     "solve_ivbmp",
     "SolveIvbmpResult",
+    "PoincareMap",
     "JacDimErr",
     "HesDimErr",
     "SomeJacUndefined",

@@ -1,5 +1,5 @@
 import numpy as np
-from hds import ContinuousMode as CM, DiscreteMode as DM, solve_ivbmp
+from hds import ContinuousMode as CM, DiscreteMode as DM, solve_ivbmp, PoincareMap
 from hds.tools import DictVector
 
 class Parameter(DictVector):
@@ -92,20 +92,24 @@ def main ():
     y0 = -1.71591635
     param = Parameter()
 
-    mode0 = DM(p, jac_fun=p_jac, hes_fun=p_hes)
-    mode1 = CM(izhikevich, borders=[fire_border],
-        jac_fun=izhikevich_jac, hes_fun=izhikevich_hes,
-        jac_border= [fire_border_dy], hes_border=[fire_border_dy2])
-    mode2 = DM(jump, jac_fun=jump_jac, hes_fun=jump_hes)
-    mode3 = DM(pinv, jac_fun=pinv_jac, hes_fun=pinv_hes)
+    all_modes = (
+        DM('m0', p, jac_fun=p_jac, hes_fun=p_hes),
+        CM('m1', izhikevich, borders=[fire_border],
+            jac_fun=izhikevich_jac, hes_fun=izhikevich_hes,
+            jac_border= [fire_border_dy], hes_border=[fire_border_dy2]),
+        DM('m2', jump, jac_fun=jump_jac, hes_fun=jump_hes),
+        DM('m3', pinv, jac_fun=pinv_jac, hes_fun=pinv_hes)
+    )
 
-    mode0.next = mode1
-    mode1.next = [mode2]
-    mode2.next = mode3
-    mode3.next = mode0
+    transitions = {
+        'm0': 'm1',
+        'm1': ['m2'],
+        'm2': 'm3',
+        'm3': 'm0'
+    }
 
-    result = solve_ivbmp(y0, mode0, args=param, calc_hes=True)
-    print(result)
+    pmap = PoincareMap(all_modes, transitions, 'm0', calc_jac=True, calc_hes=True, args=param)
+    print(pmap.image(y0))
 
 if __name__=="__main__":
     main()
