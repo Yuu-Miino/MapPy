@@ -1,7 +1,7 @@
 DictVector
 ==========
 
-.. currentmodule:: hds.tools
+.. currentmodule:: MapPy.tools
 
 .. autoclass:: DictVector
    :show-inheritance:

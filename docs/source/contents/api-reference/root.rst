@@ -1,7 +1,7 @@
 ===
-hds
+MapPy
 ===
 
-.. automodapi:: hds
+.. automodapi:: MapPy
     :no-inheritance-diagram:
     :no-heading:

@@ -1,6 +1,6 @@
 solve_ivbmp
 ===========
 
-.. currentmodule:: hds
+.. currentmodule:: MapPy
 
 .. autofunction:: solve_ivbmp

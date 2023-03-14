@@ -1,6 +1,6 @@
 SomeHesUndefined
 ================
 
-.. currentmodule:: hds
+.. currentmodule:: MapPy
 
 .. autoexception:: SomeHesUndefined

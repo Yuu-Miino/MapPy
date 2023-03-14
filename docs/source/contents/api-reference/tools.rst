@@ -1,7 +1,7 @@
 
-hds.tools
-=========
+MapPy.tools
+===========
 
-.. automodapi:: hds.tools
+.. automodapi:: MapPy.tools
     :no-inheritance-diagram:
     :no-heading:

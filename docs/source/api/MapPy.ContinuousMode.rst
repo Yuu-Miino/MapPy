@@ -1,7 +1,7 @@
 ContinuousMode
 ==============
 
-.. currentmodule:: hds
+.. currentmodule:: MapPy
 
 .. autoclass:: ContinuousMode
    :show-inheritance:

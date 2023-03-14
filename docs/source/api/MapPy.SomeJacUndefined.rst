@@ -1,6 +1,6 @@
 SomeJacUndefined
 ================
 
-.. currentmodule:: hds
+.. currentmodule:: MapPy
 
 .. autoexception:: SomeJacUndefined

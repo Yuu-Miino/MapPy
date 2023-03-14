@@ -1,7 +1,7 @@
 SolveIvbmpResult
 ================
 
-.. currentmodule:: hds
+.. currentmodule:: MapPy
 
 .. autoclass:: SolveIvbmpResult
    :show-inheritance:

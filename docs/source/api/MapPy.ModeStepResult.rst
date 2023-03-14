@@ -1,7 +1,7 @@
 ModeStepResult
 ==============
 
-.. currentmodule:: hds
+.. currentmodule:: MapPy
 
 .. autoclass:: ModeStepResult
    :show-inheritance:

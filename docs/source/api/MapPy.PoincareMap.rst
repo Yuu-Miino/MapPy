@@ -1,7 +1,7 @@
 PoincareMap
 ===========
 
-.. currentmodule:: hds
+.. currentmodule:: MapPy
 
 .. autoclass:: PoincareMap
    :show-inheritance:

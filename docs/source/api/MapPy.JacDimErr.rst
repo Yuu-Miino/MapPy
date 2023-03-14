@@ -1,6 +1,6 @@
 JacDimErr
 =========
 
-.. currentmodule:: hds
+.. currentmodule:: MapPy
 
 .. autoexception:: JacDimErr

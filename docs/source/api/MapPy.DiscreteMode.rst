@@ -1,7 +1,7 @@
 DiscreteMode
 ============
 
-.. currentmodule:: hds
+.. currentmodule:: MapPy
 
 .. autoclass:: DiscreteMode
    :show-inheritance:

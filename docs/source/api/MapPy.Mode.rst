@@ -1,7 +1,7 @@
 Mode
 ====
 
-.. currentmodule:: hds
+.. currentmodule:: MapPy
 
 .. autoclass:: Mode
    :show-inheritance:

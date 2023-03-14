@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.abspath("../.."))
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'HDS'
+project = 'MapPy'
 copyright = '2023, Yuu Miino'
 author = 'Yuu Miino'
 release = '0.0.1'
@@ -40,12 +40,12 @@ exclude_patterns = []
 html_theme = 'pydata_sphinx_theme'
 html_static_path = ['_static']
 html_css_files = [
-    'styles/hds.css',
+    'styles/MapPy.css',
 ]
 
 html_theme_options = {
     "logo": {
-        "text": "HDS package",
+        "text": "MapPy package",
         "image_light": "https://miino.sytes.net/figs/089-traj.gif",
         "image_dark": "https://miino.sytes.net/figs/089-traj.gif",
     }

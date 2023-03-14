@@ -1,6 +1,6 @@
 HesDimErr
 =========
 
-.. currentmodule:: hds
+.. currentmodule:: MapPy
 
 .. autoexception:: HesDimErr

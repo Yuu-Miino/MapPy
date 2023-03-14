@@ -1,17 +1,17 @@
-.. hds documentation master file, created by
+.. MapPy documentation master file, created by
    sphinx-quickstart on Sat Feb 25 00:39:16 2023.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
 :html_theme.sidebar_secondary.remove: true
 
-#################
-HDS documentation
-#################
+###################
+MapPy documentation
+###################
 
 **Version**: |release|
 
-HDS is the package including many useful tools to analyze the hybrid dynamical systems.
+MapPy is the package including many useful tools to analyze the hybrid dynamical systems.
 
 .. toctree::
    :hidden:
@@ -30,7 +30,7 @@ HDS is the package including many useful tools to analyze the hybrid dynamical s
       ^^^^^^^^^^^^^^^
 
       Check out the Absolute Beginner's Guide. It contains an
-      introduction to HDS's main concepts and links to additional tutorials.
+      introduction to MapPy's main concepts and links to additional tutorials.
 
       .. button-ref:: contents/getting_started
          :expand:
@@ -45,7 +45,7 @@ HDS is the package including many useful tools to analyze the hybrid dynamical s
       User Guide
       ^^^^^^^^^^
 
-      The user guide provides in-depth information on the key concepts of HDS
+      The user guide provides in-depth information on the key concepts of MapPy
       with some academic references.
 
       .. button-ref:: contents/user_guide
@@ -62,7 +62,7 @@ HDS is the package including many useful tools to analyze the hybrid dynamical s
       ^^^^^^^^^^^^^
 
       The reference guide contains a detailed description of the functions,
-      modules, and objects included in HDS. The reference describes how the
+      modules, and objects included in MapPy. The reference describes how the
       methods work and which parameters can be used. It assumes that you have an
       understanding of the key concepts.
 

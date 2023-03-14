@@ -21,7 +21,7 @@ help:
 
 # .PHONY: sphinx-apidoc
 # sphinx-apidoc:
-#	sphinx-apidoc -Mf -o source/modules -M "../hds/"
+#	sphinx-apidoc -Mf -o source/modules -M "../MapPy/"
 #	rm source/modules/modules.rst
 
 .PHONY: html
