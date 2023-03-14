@@ -1,6 +1,6 @@
 import numpy as np
-from hds import ContinuousMode as CM, DiscreteMode as DM, solve_ivbmp, PoincareMap
-from hds.tools import DictVector
+from MapPy import ContinuousMode as CM, DiscreteMode as DM, solve_ivbmp, PoincareMap
+from MapPy.tools import DictVector
 
 class Parameter(DictVector):
     a: float = 0.2

@@ -1,6 +1,6 @@
 """Fundamental package to investigate limit cycle
 """
-from hds._fundamentals import *
+from MapPy._fundamentals import *
 
 __all__ = [
     "Mode",
