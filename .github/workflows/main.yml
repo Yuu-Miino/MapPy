@@ -1,0 +1,15 @@
+name: "Pull Request Docs Check"
+on: 
+  push:
+    branches: ['main']
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - uses: ammaraskar/sphinx-action@master
+      with:
+        docs-folder: "docs/"
+        build-command: "make html"
+        pre-build-command: "pip install -r docs/requirements.txt"
