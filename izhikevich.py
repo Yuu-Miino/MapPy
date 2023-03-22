@@ -8,7 +8,6 @@ Mode.parameters = 5
 def izhikevich (y, param):
     v, u = y
     a, b, _, _, I = param
-
     return np.array([
         0.04 * (v**2) + 5.0 * v + 140.0 - u + I,
         a * (b * v - u)
@@ -19,24 +18,18 @@ def izhikevich (y, param):
 def fire_border(y, param):
     return y[0] - 30.0
 
-def fire_border_dy(y, param):
-    return np.array([1, 0])
-
-def fire_border_dy2(y, param):
-    return np.array([[0, 0], [0, 0]])
-
 ## Firing jump
-@DM.function(domain_dimension = 2, codomain_dimenstion = 2)
+@DM.function(domain_dimension = 2, codomain_dimension = 2)
 def jump(y, param):
     C = np.array([-30 + param[2], param[3]])
     return y + C
 
 ## Dimension conversion (p: 1 -> 2, pinv: 2 -> 1)
-@DM.function(domain_dimension= 1, codomain_dimenstion= 2)
+@DM.function(domain_dimension= 1, codomain_dimension= 2)
 def p(y, param):
     return np.array([0, 1]) * y + np.array([param[2], 0])
 
-@DM.function(domain_dimension= 2, codomain_dimenstion= 1)
+@DM.function(domain_dimension= 2, codomain_dimension= 1)
 def pinv(y, param):
     return np.array([0, 1]) @ y
 
@@ -53,8 +46,7 @@ def main ():
 
     all_modes = (
         DM('m0', p),
-        CM('m1', izhikevich, borders=[fire_border],
-            jac_border= [fire_border_dy], hes_border=[fire_border_dy2]),
+        CM('m1', izhikevich, borders=[fire_border]),
         DM('m2', jump),
         DM('m3', pinv)
     )
@@ -66,7 +58,7 @@ def main ():
         'm3': 'm0'
     }
 
-    pmap = PoincareMap(all_modes, transitions, 'm0', calc_jac=True, calc_hes=True, args=list(param.values()))
+    pmap = PoincareMap(all_modes, transitions, 'm0', calc_jac=True, calc_hes=True, params=list(param.values()))
     print(pmap.image(y0))
 
 if __name__=="__main__":
