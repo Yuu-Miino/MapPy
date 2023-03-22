@@ -494,11 +494,6 @@ class DiscreteMode (Mode):
         Returns
         -------
         ModeStepResult
-
-        Raises
-        ------
-        JacDimErr
-            Error of the dimension of the Jacobian matrix.
         """
         ## Setup
         y1  = y0 if isinstance(y0, float) else y0.copy()
