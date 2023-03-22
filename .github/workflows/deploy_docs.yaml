@@ -24,10 +24,6 @@ jobs:
       working-directory: ./docs
       run: make html
 
-    - name: Make artifact
-      working-directory: ./docs
-      run: tar -cf "$RUNNER_TEMP/artifact.tar" ./build/html
-
     - name: Upload GitHub Pages artifact
       uses: actions/upload-pages-artifact@v1.0.7
       with:
