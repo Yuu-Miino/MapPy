@@ -134,6 +134,8 @@ class ModeStepResult:
 class Mode:
     """Parent Class of all modes
     """
+    parameters: int
+
     def __init__(self,
         name: str,
         fun: Callable[Concatenate[Y, P], YF],
@@ -142,18 +144,37 @@ class Mode:
     ) -> None:
         self.name = name
         self.fun = fun
-        if jac_fun is not None:
-            self.jac_fun = jac_fun
-        else:
+
+        if jac_fun is None:
             symb = sympy.symbols(' '.join([f'x_{i}' for i in range(self.fun.dom_dim)]))
-            jac = sympy.Matrix(fun(symb, args)).jacobian(symb)
-            hess = sympy.derive_by_array(jac, symb)
-        if hes_fun is not None:
-            self.hes_fun = hes_fun
-        else:
-            symb = sympy.symbols(' '.join([f'x_{i}' for i in range(dim)]))
-            jac = lambda y, args=None: sympy.Matrix(ode(symb)).jacobian(symb)
-            hess = sympy.derive_by_array(jac, symb)
+            args = sympy.symbols(' '.join([f'p_{i}' for i in range(Mode.parameters)]))
+            isScalarF = hasattr(self.fun, 'cod_dim') and self.fun.cod_dim == 1
+            if isScalarF:
+                f = fun(symb, args)
+            else:
+                f = sympy.Matrix(fun(symb, args))
+
+            if self.fun.dom_dim == 1:
+                jac = sympy.diff(f, symb)
+            else:
+                if isScalarF:
+                    jac = sympy.derive_by_array(f, symb)
+                else:
+                    jac = f.jacobian(symb)
+            jac_fun = sympy.lambdify((symb, args), jac, 'numpy')
+        self.jac_fun = jac_fun
+
+        if hes_fun is None:
+            symb = sympy.symbols(' '.join([f'x_{i}' for i in range(self.fun.dom_dim)]))
+            args = sympy.symbols(' '.join([f'p_{i}' for i in range(Mode.parameters)]))
+            jac = sympy.Matrix(jac_fun(symb, args))
+            if self.fun.dom_dim == 1:
+                hess = sympy.diff(jac, symb)
+            else:
+                hess = sympy.derive_by_array(jac, symb)
+            hes_fun = sympy.lambdify((symb, args), hess, 'numpy')
+            # hes_fun = lambda y, p: numpy.array(hess.subs([(symb, y), (args, p)]))
+        self.hes_fun = hes_fun
     def __hash__(self): return hash(id(self))
     def __eq__(self, x): return x is self
     def __ne__(self, x): return x is not self
