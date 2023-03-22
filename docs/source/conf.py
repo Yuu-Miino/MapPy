@@ -75,4 +75,5 @@ mathjax3_config = {
 
 # -- Options for sphinx-multiversion -----------------------------------------
 # smv_tag_whitelist = r'^\d+\.\d+$'
-# smv_branch_whitelist = r'^main$'
+# smv_branch_whitelist = r'^master$'
+smv_remote_whitelist = r'^.*$'
