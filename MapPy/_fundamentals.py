@@ -1,6 +1,6 @@
 """Fundamental classes and functions
 """
-from typing import Concatenate, ParamSpec, TypeVar
+from typing import TypeVar
 from collections.abc import Callable
 from functools import wraps
 import numpy
@@ -23,7 +23,7 @@ __all__ = [
 ]
 
 
-P = ParamSpec('P')
+P = TypeVar('P', numpy.ndarray, float)
 Y = TypeVar('Y', numpy.ndarray, float)
 YF = TypeVar('YF', numpy.ndarray, float)
 YJ = TypeVar('YJ', numpy.ndarray, float)
@@ -138,9 +138,9 @@ class Mode:
 
     def __init__(self,
         name: str,
-        fun: Callable[Concatenate[Y, P], YF],
-        jac_fun: Callable[Concatenate[Y, P], YJ] | None = None,
-        hes_fun: Callable[Concatenate[Y, P], YH] | None = None
+        fun: Callable[[Y, P], YF],
+        jac_fun: Callable[[Y, P], YJ] | None = None,
+        hes_fun: Callable[[Y, P], YH] | None = None
     ) -> None:
         self.name = name
         self.fun = fun
@@ -157,11 +157,13 @@ class Mode:
             if self.fun.dom_dim == 1:
                 jac = sympy.diff(f, symb)
             else:
-                if isScalarF:
+                if not isinstance(f, sympy.Matrix):
                     jac = sympy.derive_by_array(f, symb)
                 else:
                     jac = f.jacobian(symb)
             jac_fun = sympy.lambdify((symb, args), jac, 'numpy')
+            if jac_fun is None:
+                raise Exception('lambdify returns None')
         self.jac_fun = jac_fun
 
         if hes_fun is None:
@@ -227,12 +229,12 @@ class ContinuousMode (Mode):
 
     def __init__(self,
         name: str,
-        fun: Callable[Concatenate[Y, P], YF],
-        borders: list[Callable[Concatenate[Y, P], float]],
-        jac_fun: Callable[Concatenate[Y, P], YJ] | None = None,
-        hes_fun: Callable[Concatenate[Y, P], YH] | None = None,
-        jac_border: list[Callable[Concatenate[Y, P], YBJ]] | None = None,
-        hes_border: list[Callable[Concatenate[Y, P], YBH]] | None = None,
+        fun: Callable[[Y, P], YF],
+        borders: list[Callable[[Y, P], float]],
+        jac_fun: Callable[[Y, P], YJ] | None = None,
+        hes_fun: Callable[[Y, P], YH] | None = None,
+        jac_border: list[Callable[[Y, P], YBJ]] | None = None,
+        hes_border: list[Callable[[Y, P], YBH]] | None = None,
         max_interval: float = float(20),
     ) -> None:
         super().__init__(name, fun, jac_fun, hes_fun)
@@ -241,7 +243,7 @@ class ContinuousMode (Mode):
         self.jac_border = jac_border
         self.hes_border = hes_border
 
-    def __ode_jac (self, y: numpy.ndarray, ode_fun: Callable[Concatenate[Y, P], YF], jac_fun: Callable[Concatenate[Y, P], YJ], args=None) -> numpy.ndarray:
+    def __ode_jac (self, y: numpy.ndarray, ode_fun: Callable[[Y, P], YF], jac_fun: Callable[[Y, P], YJ], args=None) -> numpy.ndarray:
         dim = ode_fun.dom_dim
         try:
             dydy0 = y[dim:dim+(dim**2)].reshape((dim, dim), order='F')
@@ -260,9 +262,9 @@ class ContinuousMode (Mode):
 
     def __ode_hes (self,
             y: numpy.ndarray,
-            ode_fun: Callable[Concatenate[Y, P], YF],
-            jac_fun: Callable[Concatenate[Y, P], YJ],
-            hes_fun: Callable[Concatenate[Y, P], YH],
+            ode_fun: Callable[[Y, P], YF],
+            jac_fun: Callable[[Y, P], YJ],
+            hes_fun: Callable[[Y, P], YH],
             args=None
         ) -> numpy.ndarray:
         dim = ode_fun.dom_dim
@@ -309,10 +311,10 @@ class ContinuousMode (Mode):
         Callable
             Decorated `fun` function compatible with `ContinousTimeMode`
         """
-        def _decorator(fun: Callable[P, YF]) -> Callable[P, YF]:
+        def _decorator(fun: Callable[[Y, P], YF]) -> Callable[[Y, P], YF]:
             @wraps(fun)
-            def _wrapper(*args: P.args, **kwargs: P.kwargs) -> YF:
-                ret = fun(*args, **kwargs)
+            def _wrapper(y: Y, p: P) -> YF:
+                ret = fun(y, p)
                 return ret
             setattr(_wrapper, 'dom_dim', dimension)
             return _wrapper
@@ -333,10 +335,10 @@ class ContinuousMode (Mode):
         Callable
             Decorated `border` function compatible with `ContinuousTimeMode`
         """
-        def _decorator(fun: Callable[P, YF]) -> Callable[P, YF]:
+        def _decorator(fun: Callable[[Y, P], YF]) -> Callable[[Y, P], YF]:
             @wraps(fun)
-            def _wrapper(*args: P.args, **kwargs: P.kwargs) -> YF:
-                ret = fun(*args, **kwargs)
+            def _wrapper(y: Y, p: P) -> YF:
+                ret = fun(y, p)
                 return ret
             setattr(_wrapper, 'direction', direction)
             return _wrapper
@@ -481,9 +483,9 @@ class DiscreteMode (Mode):
 
     def __init__(self,
         name: str,
-        fun: Callable[Concatenate[Y, P], YF],
-        jac_fun: Callable[Concatenate[Y, P], YJ] | None = None,
-        hes_fun: Callable[Concatenate[Y, P], YH] | None = None
+        fun: Callable[[Y, P], YF],
+        jac_fun: Callable[[Y, P], YJ] | None = None,
+        hes_fun: Callable[[Y, P], YH] | None = None
     ) -> None:
         super().__init__(name, fun, jac_fun, hes_fun)
 
@@ -503,10 +505,10 @@ class DiscreteMode (Mode):
         Callable
             Decorated function compatible with `DiscreteTimeMode`
         """
-        def _decorator(fun: Callable[P, YF]) -> Callable[P, YF]:
+        def _decorator(fun: Callable[[Y, P], YF]) -> Callable[[Y, P], YF]:
             @wraps(fun)
-            def _wrapper(*args: P.args, **kwargs: P.kwargs) -> YF:
-                ret = fun(*args, **kwargs)
+            def _wrapper(y: Y, p: P) -> YF:
+                ret = fun(y, p)
                 return ret
             setattr(_wrapper, 'dom_dim', domain_dimension)
             setattr(_wrapper, 'cod_dim', codomain_dimenstion)
