@@ -5,6 +5,7 @@
 # from the environment for the first two.
 SPHINXOPTS    ?=
 SPHINXBUILD   ?= sphinx-build
+SPHINXMULTI   ?= sphinx-multiversion
 SOURCEDIR     = source
 BUILDDIR      = build
 
@@ -26,7 +27,7 @@ help:
 
 .PHONY: html
 html: # sphinx-apidoc # ds_mode
-	$(SPHINXBUILD) -b html "$(SOURCEDIR)" "$(BUILDDIR)/html"
+	$(SPHINXMULTI) "$(SOURCEDIR)" "$(BUILDDIR)/html"
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 

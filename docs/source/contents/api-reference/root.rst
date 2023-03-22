@@ -1,6 +1,5 @@
-===
 MapPy
-===
+=====
 
 .. automodapi:: MapPy
     :no-inheritance-diagram:

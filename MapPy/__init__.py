@@ -1,6 +1,6 @@
 """Fundamental package to investigate limit cycle
 """
-from MapPy._fundamentals import *
+from ._fundamentals import *
 
 __all__ = [
     "Mode",
@@ -9,9 +9,5 @@ __all__ = [
     "ModeStepResult",
     "solve_ivbmp",
     "SolveIvbmpResult",
-    "PoincareMap",
-    "JacDimErr",
-    "HesDimErr",
-    "SomeJacUndefined",
-    "SomeHesUndefined"
+    "PoincareMap"
 ]
