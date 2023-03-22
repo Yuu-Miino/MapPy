@@ -6,6 +6,7 @@ from functools import wraps
 import numpy
 from scipy.integrate import solve_ivp, OdeSolution
 numpy.set_printoptions(precision=12)
+import sympy
 
 __all__ = [
     "solve_ivbmp",
@@ -141,8 +142,18 @@ class Mode:
     ) -> None:
         self.name = name
         self.fun = fun
-        self.jac_fun = jac_fun
-        self.hes_fun = hes_fun
+        if jac_fun is not None:
+            self.jac_fun = jac_fun
+        else:
+            symb = sympy.symbols(' '.join([f'x_{i}' for i in range(self.fun.dom_dim)]))
+            jac = sympy.Matrix(fun(symb, args)).jacobian(symb)
+            hess = sympy.derive_by_array(jac, symb)
+        if hes_fun is not None:
+            self.hes_fun = hes_fun
+        else:
+            symb = sympy.symbols(' '.join([f'x_{i}' for i in range(dim)]))
+            jac = lambda y, args=None: sympy.Matrix(ode(symb)).jacobian(symb)
+            hess = sympy.derive_by_array(jac, symb)
     def __hash__(self): return hash(id(self))
     def __eq__(self, x): return x is self
     def __ne__(self, x): return x is not self
@@ -329,13 +340,15 @@ class ContinuousMode (Mode):
 
         # Replace the function for ODE and borders with the compatible forms
         ode_fun = lambda t, y, fun = self.fun: fun(y, *args)
-        jac_fun = lambda t, y, fun = self.jac_fun: fun(y, *args)
+
         if self.jac_fun is not None:
+            jac_fun = lambda t, y, fun = self.jac_fun: fun(y, *args)
             if self.hes_fun is not None:
                 ode = lambda t, y, fun = self.__ode_hes, ode_fun=self.fun, jac_fun = self.jac_fun, hes_fun = self.hes_fun: fun(y, ode_fun, jac_fun, hes_fun, args)
             else:
                 ode = lambda t, y, fun = self.__ode_jac, ode_fun=self.fun, jac_fun = self.jac_fun: fun(y, ode_fun, jac_fun, args)
         else:
+            jac_fun = None
             ode = lambda t, y, fun = self.fun: fun(y, *args)
 
         borders = []
@@ -402,7 +415,7 @@ class ContinuousMode (Mode):
             # For each borders
             for i, ev in enumerate(self.borders):
                 if len(sol.t_events[i]) != 0:
-                    if jact is not None:
+                    if jact is not None and jac_fun is not None:
                         dydt = numpy.array(ode_fun(0, y1))
                         dbdy = numpy.array(devs[i](0, y1))
                         dot: numpy.float64 = numpy.dot(dbdy, dydt)

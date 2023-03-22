@@ -13,23 +13,21 @@ class Parameter(DictVector):
 @CM.function(dimension=2)
 def izhikevich (y, param):
     v, u = y
-    a = param.a
-    b = param.b
-    I = param.I
+    a, b, _, _, I = param
 
     return np.array([
         0.04 * (v**2) + 5.0 * v + 140.0 - u + I,
         a * (b * v - u)
     ])
 
-def izhikevich_jac (y, param: Parameter):
+def izhikevich_jac (y, param):
     v = y[0]
-    a = param.a
-    b = param.b
+    a, b = param[0:2]
+
     return np.array([
         [0.08 * v + 5, -1],
         [a * b, -a]
-    ])
+    ], dtype=float)
 
 def izhikevich_hes (y, param: Parameter):
     return np.array([
@@ -57,7 +55,7 @@ def fire_border_dy2(y, param):
 ## Firing jump
 @DM.function(domain_dimension = 2, codomain_dimenstion = 2)
 def jump(y, param):
-    C = np.array([-30 + param.c, param.d])
+    C = np.array([-30 + param[2], param[3]])
     return y + C
 
 def jump_jac (y, param):
@@ -69,7 +67,7 @@ def jump_hes (y, param):
 ## Dimension conversion (p: 1 -> 2, pinv: 2 -> 1)
 @DM.function(domain_dimension= 1, codomain_dimenstion= 2)
 def p(y, param):
-    return np.array([0, 1]) * y + np.array([param.c, 0])
+    return np.array([0, 1]) * y + np.array([param[2], 0])
 
 def p_jac(y, param):
     return np.array([0, 1])
@@ -112,4 +110,6 @@ def main ():
     print(pmap.image(y0))
 
 if __name__=="__main__":
-    main()
+    # main()
+    param = Parameter()
+    print(param)
