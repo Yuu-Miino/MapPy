@@ -19,7 +19,7 @@ MapPy is the package including many useful tools to analyze the hybrid dynamical
 
    contents/getting_started
    contents/user_guide
-   contents/api-reference
+   contents/api-reference/index
 
 .. grid:: 2
 
@@ -66,7 +66,7 @@ MapPy is the package including many useful tools to analyze the hybrid dynamical
       methods work and which parameters can be used. It assumes that you have an
       understanding of the key concepts.
 
-      .. button-ref:: contents/api-reference
+      .. button-ref:: contents/api-reference/index
          :expand:
          :color: secondary
          :click-parent:

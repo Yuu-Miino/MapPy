@@ -1,4 +1,13 @@
-"""Useful tools for analysis
+"""
+=========================
+Useful tools for analysis
+=========================
+
+.. autosummary::
+    :toctree: generated/
+
+    DictVector
+
 """
 from ._dict_vector import *
 

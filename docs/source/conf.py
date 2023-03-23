@@ -2,7 +2,7 @@
 #
 import sys
 import os
-sys.path.insert(0, os.path.abspath("../"))
+sys.path.insert(0, os.path.abspath("../.."))
 
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
@@ -20,16 +20,21 @@ release = '0.0.1'
 
 extensions = [
     'sphinx.ext.autodoc',
-#    'sphinx.ext.autosummary',
-    'sphinx_automodapi.automodapi',
+    'numpydoc',
+    'sphinx.ext.autosummary',
+#    'sphinx_automodapi.automodapi',
     'sphinx.ext.mathjax',
-    'sphinx.ext.napoleon',
     'sphinx_design',
     'sphinx_multiversion',
-    'numpydoc'
 ]
-# autosummary_generate=True
+
+autosummary_generate=True
+
 autodoc_typehints = "none"
+autodoc_default_options = {
+    'inherited_members': False,
+    'show-inheritance': False
+}
 
 templates_path = ['_templates']
 exclude_patterns = []

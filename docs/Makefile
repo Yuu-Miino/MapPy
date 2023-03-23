@@ -22,12 +22,12 @@ help:
 
 # .PHONY: sphinx-apidoc
 # sphinx-apidoc:
-#	sphinx-apidoc -Mf -o source/modules -M "../MapPy/"
+# 	sphinx-apidoc -Mf -o source/modules -M "../MapPy/"
 #	rm source/modules/modules.rst
 
 .PHONY: html
 html: # sphinx-apidoc # ds_mode
-	$(SPHINXMULTI) "$(SOURCEDIR)" "$(BUILDDIR)/html"
+	$(SPHINXBUILD) "$(SOURCEDIR)" "$(BUILDDIR)/html"
 #	cp index.html "$(BUILDDIR)/html"
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
