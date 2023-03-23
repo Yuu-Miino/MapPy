@@ -2,7 +2,7 @@
 #
 import sys
 import os
-sys.path.insert(0, os.path.abspath("../.."))
+sys.path.insert(0, os.path.abspath("../"))
 
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
@@ -25,7 +25,8 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
     'sphinx_design',
-    'sphinx_multiversion'
+    'sphinx_multiversion',
+    'numpydoc'
 ]
 # autosummary_generate=True
 autodoc_typehints = "none"
@@ -74,5 +75,6 @@ mathjax3_config = {
 }
 
 # -- Options for sphinx-multiversion -----------------------------------------
-# smv_tag_whitelist = r'^\d+\.\d+$'
-# smv_branch_whitelist = r'^main$'
+# smv_tag_whitelist = r'v^\d+\.\d+$'
+# smv_branch_whitelist = r'^master$'
+

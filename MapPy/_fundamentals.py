@@ -494,6 +494,12 @@ class DiscreteMode (Mode):
         Returns
         -------
         ModeStepResult
+
+        References
+        ----------
+
+        .. [1] Y. Miino, etal, 
+
         """
         ## Setup
         y1  = y0 if isinstance(y0, float) else y0.copy()
