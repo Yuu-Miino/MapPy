@@ -1,5 +1,7 @@
 from . import fundamentals
 from .fundamentals import *
+from . import _version
 
 __all__ = fundamentals.__all__.copy()
-__version__ = '0.0.2'
+__version__ = _version.__version__
+
