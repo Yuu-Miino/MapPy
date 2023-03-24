@@ -15,7 +15,7 @@ copyright = '2023, Yuu Miino'
 author = 'Yuu Miino'
 
 import mappy
-version = mappy.__version__ or '0.0.0'
+version = mappy.__version__
 release = version
 
 # -- General configuration ---------------------------------------------------

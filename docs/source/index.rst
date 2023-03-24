@@ -9,7 +9,7 @@
 MapPy documentation
 ###################
 
-**Version**: |release|
+**Version**: |version|
 
 MapPy is the package including many useful tools to analyze the hybrid dynamical systems.
 
