@@ -20,15 +20,21 @@ release = '0.0.1'
 
 extensions = [
     'sphinx.ext.autodoc',
-#    'sphinx.ext.autosummary',
-    'sphinx_automodapi.automodapi',
+    'numpydoc',
+    'sphinx.ext.autosummary',
+#    'sphinx_automodapi.automodapi',
     'sphinx.ext.mathjax',
-    'sphinx.ext.napoleon',
     'sphinx_design',
-    'sphinx_multiversion'
+    'sphinx_multiversion',
 ]
-# autosummary_generate=True
+
+autosummary_generate=True
+
 autodoc_typehints = "none"
+autodoc_default_options = {
+    'inherited_members': False,
+    'show-inheritance': False
+}
 
 templates_path = ['_templates']
 exclude_patterns = []
@@ -74,6 +80,5 @@ mathjax3_config = {
 }
 
 # -- Options for sphinx-multiversion -----------------------------------------
-# smv_tag_whitelist = r'^\d+\.\d+$'
+# smv_tag_whitelist = r'v^\d+\.\d+$'
 # smv_branch_whitelist = r'^master$'
-smv_remote_whitelist = r'^.*$'

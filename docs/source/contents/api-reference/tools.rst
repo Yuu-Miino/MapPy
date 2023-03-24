@@ -1,7 +1,17 @@
+.. _tools:
 
-MapPy.tools
-===========
+.. module:: mappy.tools
 
-.. automodapi:: MapPy.tools
-    :no-inheritance-diagram:
-    :no-heading:
+=====
+Tools
+=====
+
+.. currentmodule:: mappy.tools
+
+Classes
+-------
+
+.. autosummary::
+    :toctree: generated/
+
+    DictVector

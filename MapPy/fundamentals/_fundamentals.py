@@ -15,7 +15,11 @@ __all__ = [
     "ContinuousMode",
     "DiscreteMode",
     "ModeStepResult",
-    "Mode"
+    "Mode",
+    "SomeJacUndefined",
+    "SomeHesUndefined",
+    "TransitionKeyError",
+    "AllModesKeyError"
 ]
 
 
@@ -45,6 +49,8 @@ class AllModesKeyError (Exception):
 class ModeStepResult:
     """Result of `step` in `Mode`
 
+    The ModeStepResult class provides the result of `step` in the mode.
+
     Parameters
     ----------
     status : int
@@ -54,14 +60,15 @@ class ModeStepResult:
         Value of the solution after step.
     tend : float or None, optional
         Value of the time after step of the continuous-time mode, by default `None`.
-    i_border: int or None, optional
+    i_border : int or None, optional
         Index of the border where the trajectory arrives, by default `None`.
-    jac: numpy.ndarray, float, or None, optional
+    jac : numpy.ndarray, float, or None, optional
         Value of the Jacobian matrix, by default `None`.
-    hes: numpy.ndarray, float, or None, optional
+    hes : numpy.ndarray, float, or None, optional
         Value of the Hessian tensor, by default `None`.
-    sol: OdeSolution or None, optional
+    sol : OdeSolution or None, optional
         OdeSolution instance of `solve_ivp` in the continuous-time mode, by default `None`.
+
     """
     def __init__(self,
         status: int,
@@ -85,6 +92,21 @@ class ModeStepResult:
 
 class Mode:
     """Parent Class of all modes
+
+    Parent Class of all modes
+
+    Parameters
+    ----------
+    name : str
+        Name of the mode.
+    fun : Callable
+        Evolutional function in the mode.
+
+    Attributes
+    ----------
+    parameters : int
+        Count of the common system parameters.
+
     """
     parameters: int
 
@@ -133,6 +155,8 @@ class Mode:
     def step(self, y0: numpy.ndarray | float, params = None, **options) -> ModeStepResult:
         """Step to the next mode
 
+        Step to the next mode
+
         Parameters
         ----------
         y0 : numpy.ndarray
@@ -151,6 +175,8 @@ class Mode:
 
 class ContinuousMode (Mode):
     """Mode for the continuos-time dynamical system
+
+    Mode for the continuos-time dynamical system
 
     Parameters
     ----------
@@ -250,6 +276,8 @@ class ContinuousMode (Mode):
     def function(cls, dimension: int) -> Callable:
         """Decorator for `fun` in `ContinuousTimeMode`
 
+        Decorator for `fun` in `ContinuousTimeMode`
+
         Parameters
         ----------
         dimension : int
@@ -272,6 +300,8 @@ class ContinuousMode (Mode):
     @classmethod
     def border(cls, direction: int = 1) -> Callable:
         """Decorator for the element of `borders` in `ContinuousTimeMode`
+
+        Decorator for the element of `borders` in `ContinuousTimeMode`
 
         Parameters
         ----------
@@ -302,15 +332,17 @@ class ContinuousMode (Mode):
     )->ModeStepResult:
         """Step to the next mode
 
+        Step to the next mode
+
         Parameters
         ----------
         y0 : numpy.ndarray or float
             The initial state y0 of the system evolution.
         params : Any, optional
             Parameters to pass to `fun` and `borders`, by default None.
-        calc_jac: Boolean, optional
+        calc_jac : Boolean, optional
             Flag to calculate the Jacobian matrix of the map from initial value to the result y, by default `True`.
-        calc_hes: Boolean, optional
+        calc_hes : Boolean, optional
             Flag to calculate the Hessian matrix of the map from initial value to the result y, by default `True`.
             If True, calc_jac is automatically set to `True`.
         **options
@@ -424,9 +456,11 @@ class ContinuousMode (Mode):
 class DiscreteMode (Mode):
     """Mode of the discrete-time dynamical system
 
+    Mode of the discrete-time dynamical system
+
     Parameters
     ----------
-    name: str
+    name : str
         Name of the mode.
     fun : Callable
         Right-hand side of the discrete-time dynamical system. The calling signature is fun(y).
@@ -445,6 +479,8 @@ class DiscreteMode (Mode):
     @classmethod
     def function(cls, domain_dimension: int, codomain_dimension: int) -> Callable:
         """Decorator for `fun` in `DiscreteTimeMode`
+
+        Decorator for `fun` in `DiscreteTimeMode`
 
         Parameters
         ----------
@@ -477,15 +513,17 @@ class DiscreteMode (Mode):
     ) -> ModeStepResult:
         """Step to the next mode
 
+        Step to the next mode
+
         Parameters
         ----------
         y0 : numpy.ndarray or float
             The initial state y0 of the system evolution.
         params : Any, optional
             Arguments to pass to `fun` and `jac_fun`, by default None.
-        calc_jac: Boolean, optional
+        calc_jac : Boolean, optional
             Flag to calculate the Jacobian matrix of the map from initial value to the result y, by default `True`.
-        calc_hes: Boolean, optional
+        calc_hes : Boolean, optional
             Flag to calculate the Hessian matrix of the map from initial value to the result y, by default `True`.
             If True, calc_jac is automatically set to `True`.
         **options
@@ -494,6 +532,7 @@ class DiscreteMode (Mode):
         Returns
         -------
         ModeStepResult
+
         """
         ## Setup
         y1  = y0 if isinstance(y0, float) else y0.copy()
@@ -546,19 +585,21 @@ class DiscreteMode (Mode):
 class SolveIvbmpResult:
     """Result of `solve_ivbmp`
 
+    Result of `solve_ivbmp`
+
     Parameters
     ----------
     y : numpy.ndarray or float
         The value of state after mapping.
-    trans_history:
+    trans_history : list[str]
         Transition history of the modes by index of `all_modes`.
-    jac: numpy.ndarray, float, or None, optional
+    jac : numpy.ndarray, float, or None, optional
         Jacobian matrix of the map, by default `None`.
-    eigvals: numpy.ndarray, float or None, optional
+    eigvals : numpy.ndarray, float or None, optional
         Eigenvalues of the Jacobian matrix, by default `None`.
-    eigvecs: numpy.ndarray or None, optional
+    eigvecs : numpy.ndarray or None, optional
         Eigenvectors corresponding to `eigs`, by default `None`.
-    hes: numpy.ndarray, float, or None, optional
+    hes : numpy.ndarray, float, or None, optional
         Hessian tensor of the map, by default `None`.
     """
     def __init__(self,
@@ -604,17 +645,19 @@ def solve_ivbmp(
 ) -> SolveIvbmpResult:
     """Solve the initial value and boundary **modes** problem of the hybrid dynamical system
 
+    Solve the initial value and boundary **modes** problem of the hybrid dynamical system
+
     Parameters
     ----------
     y0 : numpy.ndarray or float
         Initial value y0.
-    all_modes: tuple of Modes
+    all_modes : tuple of Modes
         Set of all modes.
-    trans: dict
+    trans : dict
         Transition function that maps from `current mode` to `next mode`.
     initial_mode : str
         Name of the initial mode.
-    end_mode: Mode or None, optional
+    end_mode : Mode or None, optional
         Name of the end mode, by default `None`. If `None`, the end mode in the method is the same as `initial_mode`.
     calc_jac : bool, optional
         Flag to calculate the Jacobian matrix, by default `True`.
@@ -725,13 +768,32 @@ def solve_ivbmp(
     return SolveIvbmpResult( y0, trans_history, jac, eigs, eigv, hes)
 
 class PoincareMap():
+    """Construct Poincare map
+
+    Construct Poincare map
+
+    Parameters
+    ----------
+    all_modes : tuple[Mode, ...]
+        Tuple containing all modes.
+    trans : dict[str, str  |  list[str]]
+        Dictionary defining transition rule.
+    initial_mode : str
+        Initial mode of the Poincare map.
+    calc_jac : bool, optional
+        Flag to calculate Jacobian matrix of the map, by default `False`.
+    calc_hes : bool, optional
+        Flag to calculate Hessian matrix of the map, by default `False`.
+    params : numpy.ndarray, float, or None, optional
+        System parameter vector, by default None
+    """
     def __init__(self,
         all_modes: tuple[Mode, ...],
         trans: dict[str, str | list[str]],
         initial_mode: str,
         calc_jac: bool = False,
         calc_hes: bool = False,
-        params = None,
+        params: P = None,
         **options
     ) -> None:
         self.all_modes = all_modes
@@ -746,6 +808,20 @@ class PoincareMap():
         y0: numpy.ndarray | float,
         iterations: int = 1
     ):
+        """Calculate image of the Poincare map
+
+        Parameters
+        ----------
+        y0 : numpy.ndarray or float
+            Initial state.
+        iterations : int, optional
+            Count of iterations of the map, by default `1`.
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         slv = solve_ivbmp(
             y0, self.all_modes, self.trans,
             self.initial_mode, end_mode= self.initial_mode,

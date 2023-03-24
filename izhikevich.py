@@ -1,5 +1,5 @@
 import numpy as np
-from MapPy import ContinuousMode as CM, DiscreteMode as DM, solve_ivbmp, PoincareMap, Mode
+from mappy import ContinuousMode as CM, DiscreteMode as DM, solve_ivbmp, PoincareMap, Mode
 
 Mode.parameters = 5
 
