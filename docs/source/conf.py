@@ -52,7 +52,6 @@ html_css_files = [
     'styles/MapPy.css',
 ]
 
-version = release
 html_theme_options = {
     "logo": {
         "text": "MapPy package",
