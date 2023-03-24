@@ -73,3 +73,8 @@ html[data-theme=dark] h1 {
 html[data-theme=dark] h3 {
     color: #0a6774;
 }
+
+.version-switcher__container a[data-version-name*="latest"] {
+    color: rgb(25, 135, 84);
+    background-color: rgba(25, 135, 84, .1);
+ }
