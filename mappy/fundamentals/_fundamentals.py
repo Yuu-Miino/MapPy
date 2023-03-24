@@ -819,8 +819,8 @@ class PoincareMap():
 
         Returns
         -------
-        _type_
-            _description_
+        SolveIvbmpResult
+            Result of calculation.
         """
         slv = solve_ivbmp(
             y0, self.all_modes, self.trans,
