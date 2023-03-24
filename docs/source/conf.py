@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.abspath("../.."))
 project = 'MapPy'
 copyright = '2023, Yuu Miino'
 author = 'Yuu Miino'
-release = '0.0.1'
+release = '0.0.2'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -49,19 +49,23 @@ html_css_files = [
     'styles/MapPy.css',
 ]
 
+version = release
 html_theme_options = {
     "logo": {
         "text": "MapPy package",
         "image_light": "https://miino.sytes.net/figs/089-traj.gif",
         "image_dark": "https://miino.sytes.net/figs/089-traj.gif",
-    }
+    },
+    "switcher": {
+        "json_url": "https://yuu-miino.github.io/MapPy/master/_static/switcher.json",
+        "version_match": version
+    },
+    "navbar_start": ["navbar-logo", "version-switcher"]
 }
 
-html_list = ["search-field.html", "sidebar-nav-bs.html", "versioning.html"]
+html_list = ["search-field.html", "sidebar-nav-bs.html"]
 html_sidebars = {
     "contents/**": html_list,
-    "modules/*": html_list,
-    "api/*": html_list
 }
 
 mathjax3_config = {
