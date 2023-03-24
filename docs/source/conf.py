@@ -13,7 +13,10 @@ sys.path.insert(0, os.path.abspath("../.."))
 project = 'MapPy'
 copyright = '2023, Yuu Miino'
 author = 'Yuu Miino'
-release = '0.0.2'
+
+import mappy
+version = mappy.__version__
+release = version
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
