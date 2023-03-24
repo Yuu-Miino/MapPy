@@ -97,7 +97,7 @@ html_theme_options = {
         "image_dark": "https://miino.sytes.net/figs/089-traj.gif",
     },
     "switcher": {
-        "version_match": version,
+        "version_match": "current_version.name",
         "json_url": "https://yuu-miino.github.io/MapPy/master/_static/switcher.json",
     },
     "navbar_start": ["navbar-logo", "version-switcher"]
