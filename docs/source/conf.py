@@ -14,6 +14,9 @@ project = 'MapPy'
 copyright = '2023, Yuu Miino'
 author = 'Yuu Miino'
 
+from mappy import __version__
+version = __version__
+
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
