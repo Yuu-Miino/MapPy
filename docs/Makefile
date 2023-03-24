@@ -27,7 +27,7 @@ help:
 
 .PHONY: html
 html: # sphinx-apidoc # ds_mode
-	$(SPHINXBUILD) "$(SOURCEDIR)" "$(BUILDDIR)/html"
+	$(SPHINXMULTI) "$(SOURCEDIR)" "$(BUILDDIR)/html"
 #	cp index.html "$(BUILDDIR)/html"
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
