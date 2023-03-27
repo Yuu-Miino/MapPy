@@ -13,15 +13,16 @@ jobs:
         uses: actions/checkout@v3
         with:
           path: main
-      - name: Setup Python
-        uses: actions/setup-python@v4.5.0
-        with:
-          python-version: '3.11'
       - name: Checkout another repo
         uses: actions/checkout@v3
         with:
           repository: Yuu-Miino/doc.mappy
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           path: another
+      - name: Setup Python
+        uses: actions/setup-python@v4.5.0
+        with:
+          python-version: '3.11'
 
       - name: Install Python dependency
         working-directory: main/docs
