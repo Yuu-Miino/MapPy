@@ -38,10 +38,10 @@ jobs:
 
       - name: Copy HTML to another repo
         run: |
-          rm -r another/$GITHUB_REF_NAME
+          [ -e another/$GITHUB_REF_NAME ] && rm -r another/$GITHUB_REF_NAME
           cp -r main/docs/build/html/master another/$GITHUB_REF_NAME
 
-      - name: Git push
+      - name: Push to the doc repository
         working-directory: another
         run: |
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
