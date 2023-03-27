@@ -33,7 +33,9 @@ jobs:
           make clean
           make html
 
-      - name: List result
+      - name: Copy HTML to another repo
         run: |
-          ls -al main/docs/build/html
-          ls -al another/
+          cp -r master/docs/build/html/master another/devdoc
+
+      - name: Check git status
+        run: git status
