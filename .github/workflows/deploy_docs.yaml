@@ -39,7 +39,7 @@ jobs:
       - name: Copy HTML to another repo
         run: |
           [ -e another/$GITHUB_REF_NAME ] && rm -r another/$GITHUB_REF_NAME
-          cp -r main/docs/build/html/master another/$GITHUB_REF_NAME
+          cp -r main/docs/build/html another/$GITHUB_REF_NAME
 
       - name: Push to the doc repository
         working-directory: another
