@@ -1,5 +1,10 @@
 [
     {
+        "name": "dev",
+        "version": "dev",
+        "url": "https://yuu-miino.github.io/MapPy/develop/"
+    },
+    {
         "name": "0.0.5 (latest)",
         "version": "0.0.5",
         "url": "https://yuu-miino.github.io/MapPy/v0.0.5/"
