@@ -16,6 +16,7 @@ author = 'Yuu Miino'
 
 from mappy import __version__
 version = __version__
+release = version
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -57,7 +58,7 @@ html_theme_options = {
     },
     "switcher": {
         "version_match": version,
-        "json_url": "https://yuu-miino.github.io/mappy/_static/switcher.json",
+        "json_url": "https://yuu-miino.github.io/doc.mappy/develop/_static/switcher.json",
     },
     "navbar_start": ["navbar-logo", "version-switcher"]
 }
