@@ -2,12 +2,13 @@ name: Deploy documents
 
 on:
   push:
+    tags:
+      - '*'
     branches:
-      - master
+      - develop
 
 jobs:
   build:
-    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -37,7 +38,8 @@ jobs:
 
       - name: Copy HTML to another repo
         run: |
-          cp -r main/docs/build/html/master another/devdoc
+          rm -r another/$GITHUB_REF_NAME
+          cp -r main/docs/build/html/master another/$GITHUB_REF_NAME
 
       - name: Git push
         working-directory: another
