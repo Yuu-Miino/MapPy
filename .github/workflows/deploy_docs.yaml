@@ -1,0 +1,51 @@
+name: Deploy documents
+
+on:
+  push:
+    tags:
+      - '*'
+    branches:
+      - develop
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          path: main
+      - name: Checkout another repo
+        uses: actions/checkout@v3
+        with:
+          repository: Yuu-Miino/doc.mappy
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          path: another
+      - name: Setup Python
+        uses: actions/setup-python@v4.5.0
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependency
+        working-directory: main/docs
+        run: pip install -r requirements.txt
+
+      - name: Build HTML
+        working-directory: main/docs
+        run: |
+          make clean
+          make html
+
+      - name: Copy HTML to another repo
+        run: |
+          rm -r another/$GITHUB_REF_NAME
+          cp -r main/docs/build/html/master another/$GITHUB_REF_NAME
+
+      - name: Git push
+        working-directory: another
+        run: |
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add .
+          git commit -m 'Automatic update by Github Actions'
+          git push origin gh-pages
