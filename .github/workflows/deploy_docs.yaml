@@ -35,7 +35,7 @@ jobs:
 
       - name: Copy HTML to another repo
         run: |
-          cp -r master/docs/build/html/master another/devdoc
+          cp -r main/docs/build/html/master another/devdoc
 
       - name: Check git status
         run: git status
