@@ -38,4 +38,5 @@ jobs:
           cp -r main/docs/build/html/master another/devdoc
 
       - name: Check git status
+        working-directory: another
         run: git status
