@@ -11,17 +11,29 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          path: main
       - name: Setup Python
         uses: actions/setup-python@v4.5.0
         with:
           python-version: '3.11'
+      - name: Checkout another repo
+        uses: actions/checkout@v3
+        with:
+          repository: Yuu-Miino/doc.mappy
+          path: another
+
       - name: Install Python dependency
-        working-directory: docs
+        working-directory: main/docs
         run: pip install -r requirements.txt
+
       - name: Build HTML
-        working-directory: docs
+        working-directory: main/docs
         run: |
           make clean
           make html
+
       - name: List result
-        run: ls docs/build/html
+        run: |
+          ls -al main/docs/build/html
+          ls -al another/
