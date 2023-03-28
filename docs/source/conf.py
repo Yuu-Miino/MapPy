@@ -58,7 +58,7 @@ html_theme_options = {
     },
     "switcher": {
         "version_match": version,
-        "json_url": "https://yuu-miino.github.io/doc.mappy/develop/_static/switcher.json",
+        "json_url": "https://yuu-miino.github.io/doc.mappy/latest/_static/switcher.json",
     },
     "navbar_start": ["navbar-logo", "version-switcher"]
 }
