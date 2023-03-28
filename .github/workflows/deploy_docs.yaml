@@ -53,7 +53,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: html
-          path: {{ github.ref_name }}
+          path: ${{ github.ref_name }}
 
       - name: Update latest link
         run: bash update_latest.sh
