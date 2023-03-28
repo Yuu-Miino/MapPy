@@ -10,8 +10,4 @@ Useful tools for analysis
 
 """
 
-from . import _continuation
 from ._continuation import *
-
-__all__ = []
-__all__.extend(_continuation.__all__.copy())
