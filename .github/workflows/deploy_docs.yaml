@@ -13,36 +13,50 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          path: main
-      - name: Checkout another repo
-        uses: actions/checkout@v3
-        with:
-          repository: Yuu-Miino/doc.mappy
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          path: another
+
       - name: Setup Python
         uses: actions/setup-python@v4.5.0
         with:
           python-version: '3.11'
 
-      - name: Install Python dependency
-        working-directory: main/docs
+      - name: Install Python dependencies
+        working-directory: docs
         run: pip install -r requirements.txt
 
       - name: Build HTML
-        working-directory: main/docs
+        working-directory: docs
         run: |
           make clean
           make html
 
-      - name: Copy HTML to another repo
-        run: |
-          [ -e another/$GITHUB_REF_NAME ] && rm -r another/$GITHUB_REF_NAME
-          cp -r main/docs/build/html another/$GITHUB_REF_NAME
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: html
+          path: docs/build/html
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          repository: Yuu-Miino/doc.mappy
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+      - name: Remove current directory
+        run: [ -e $GITHUB_REF_NAME ] && rm -r $GITHUB_REF_NAME
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: $GITHUB_REF_NAME
+
+      - name: Update latest link
+        run: bash update_latest.sh
 
       - name: Push to the doc repository
-        working-directory: another
         run: |
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
