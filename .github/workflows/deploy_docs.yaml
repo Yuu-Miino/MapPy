@@ -46,7 +46,8 @@ jobs:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
       - name: Remove current directory
-        run: [ -e $GITHUB_REF_NAME ] && rm -r $GITHUB_REF_NAME
+        run: |
+          [ -e $GITHUB_REF_NAME ] && rm -r $GITHUB_REF_NAME
 
       - name: Download Artifact
         uses: actions/download-artifact@v3
