@@ -16,6 +16,7 @@ author = 'Yuu Miino'
 
 from mappy import __version__
 version = __version__
+release = version
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -25,8 +26,7 @@ extensions = [
     'numpydoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.mathjax',
-    'sphinx_design',
-    'sphinx_multiversion',
+    'sphinx_design'
 ]
 
 autosummary_generate=True
@@ -57,10 +57,10 @@ html_theme_options = {
         "image_dark": "https://miino.sytes.net/figs/089-traj.gif",
     },
     "switcher": {
-        "version_match": "0.0.0",
-        "json_url": "https://yuu-miino.github.io/MapPy/master/_static/switcher.json",
+        "version_match": version,
+        "json_url": "https://yuu-miino.github.io/doc.mappy/develop/_static/switcher.json",
     },
-    "navbar_start": ["navbar-logo", "version.html"]
+    "navbar_start": ["navbar-logo", "version-switcher"]
 }
 
 html_list = ["search-field.html", "sidebar-nav-bs.html"]

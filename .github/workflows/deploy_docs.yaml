@@ -13,36 +13,62 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          path: main
-      - name: Checkout another repo
-        uses: actions/checkout@v3
-        with:
-          repository: Yuu-Miino/doc.mappy
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          path: another
+
       - name: Setup Python
         uses: actions/setup-python@v4.5.0
         with:
           python-version: '3.11'
 
-      - name: Install Python dependency
-        working-directory: main/docs
+      - name: Install Python dependencies
+        working-directory: docs
         run: pip install -r requirements.txt
 
       - name: Build HTML
-        working-directory: main/docs
+        working-directory: docs
         run: |
           make clean
           make html
 
-      - name: Copy HTML to another repo
-        run: |
-          rm -r another/$GITHUB_REF_NAME
-          cp -r main/docs/build/html/master another/$GITHUB_REF_NAME
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: html
+          path: docs/build/html
 
-      - name: Git push
-        working-directory: another
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          repository: Yuu-Miino/doc.mappy
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+      - name: Remove current directory
+        run: |
+          [ -e $GITHUB_REF_NAME ] && rm -r $GITHUB_REF_NAME
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: html
+          path: ${{ github.ref_name }}
+
+      - name: Update latest link
+        shell: bash
+        run: |
+          latest=$(
+            ls -d v* |
+            awk 'BEGIN { FS="."; } { f=substr($1, 2); s=$2; t=$3; print f, s, t, $0;}' |
+            sort -k 3n -k 2n -k 1n |
+            tail -1 |
+            awk '{print $4}'
+          )
+          unlink "latest"
+          ln -s $latest "latest"
+
+      - name: Push to the doc repository
         run: |
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"

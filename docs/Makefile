@@ -5,7 +5,6 @@
 # from the environment for the first two.
 SPHINXOPTS    ?=
 SPHINXBUILD   ?= sphinx-build
-SPHINXMULTI   ?= sphinx-multiversion
 SOURCEDIR     = source
 BUILDDIR      = build
 
@@ -20,20 +19,10 @@ help:
 %: Makefile
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-# .PHONY: sphinx-apidoc
-# sphinx-apidoc:
-# 	sphinx-apidoc -Mf -o source/modules -M "../MapPy/"
-#	rm source/modules/modules.rst
-
 .PHONY: html
 html: # sphinx-apidoc # ds_mode
-	$(SPHINXMULTI) "$(SOURCEDIR)" "$(BUILDDIR)/html"
-#	cp index.html "$(BUILDDIR)/html"
+	$(SPHINXBUILD) "$(SOURCEDIR)" "$(BUILDDIR)/html"
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 
 USER_GUIDE = "$(SOURCEDIR)"/contents/user_guide/
-
-# .PHONY: ds_mode
-# ds_mode:
-# 	pandoc -i "$(USER_GUIDE)"/ds_mode.tex -o "$(USER_GUIDE)"/ds_mode.rst
