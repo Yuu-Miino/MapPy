@@ -1,5 +1,7 @@
 import numpy as np
-from mappy import ContinuousMode as CM, DiscreteMode as DM, solve_ivbmp, PoincareMap, Mode
+from mappy import ContinuousMode as CM, DiscreteMode as DM, PoincareMap, Mode
+from mappy.root import find_cycle
+from mappy.tools import continuation
 
 Mode.parameters = 5
 
@@ -43,6 +45,7 @@ def main ():
         'd': 2.0,
         'I': 10
     }
+    param_list = list(param.values())
 
     all_modes = (
         DM('m0', p),
@@ -58,8 +61,14 @@ def main ():
         'm3': 'm0'
     }
 
-    pmap = PoincareMap(all_modes, transitions, 'm0', calc_jac=True, calc_hes=True, params=list(param.values()))
-    print(pmap.image(y0))
+    pmap = PoincareMap(all_modes, transitions, 'm0', calc_jac=True, calc_hes=True)
+
+    # print(pmap.image(y0, param_list))
+    # ret = find_cycle(pmap, y0, param_list)
+    # print(ret)
+
+    l = lambda y, p: find_cycle(pmap, y, p)
+    print(continuation(l, y0, param_list, 0.3, 0, verbose=True, verbose_precision=8))
 
 if __name__=="__main__":
     main()

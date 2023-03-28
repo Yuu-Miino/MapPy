@@ -565,7 +565,7 @@ class DiscreteMode (Mode):
         if isinstance(sol, float):
             y1 = sol
         elif cod_dim == 1:
-            y1 = sol[0]
+            y1 = sol if sol.size == 1 else sol[0]
         else:
             y1 = sol[0:cod_dim]
 
@@ -757,7 +757,6 @@ def solve_ivbmp(
             eigs = jac
         else:
             jac = numpy.squeeze(jac)
-            print(jac)
             eigs, eigv = numpy.linalg.eig(jac)
     if hes is not None:
         if hes.size == 1:
@@ -784,8 +783,6 @@ class PoincareMap():
         Flag to calculate Jacobian matrix of the map, by default `False`.
     calc_hes : bool, optional
         Flag to calculate Hessian matrix of the map, by default `False`.
-    params : numpy.ndarray, float, or None, optional
-        System parameter vector, by default None
     """
     def __init__(self,
         all_modes: tuple[Mode, ...],
@@ -793,7 +790,6 @@ class PoincareMap():
         initial_mode: str,
         calc_jac: bool = False,
         calc_hes: bool = False,
-        params: P = None,
         **options
     ) -> None:
         self.all_modes = all_modes
@@ -801,14 +797,19 @@ class PoincareMap():
         self.initial_mode = initial_mode
         self.calc_jac = calc_jac
         self.calc_hes = calc_hes
-        self.params = params
         self.options = options
+        all_modes_name = [m.name for m in all_modes]
+        if initial_mode not in all_modes_name:
+            raise AllModesKeyError(initial_mode)
+        else:
+            self.dimension = all_modes[all_modes_name.index(initial_mode)].fun.dom_dim
 
-    def image(self,
-        y0: numpy.ndarray | float,
+    def image_detail(self,
+        y0: Y,
+        params: P,
         iterations: int = 1
     ):
-        """Calculate image of the Poincare map
+        """Calculate image of the Poincare map with detailed information
 
         Parameters
         ----------
@@ -826,5 +827,32 @@ class PoincareMap():
             y0, self.all_modes, self.trans,
             self.initial_mode, end_mode= self.initial_mode,
             calc_jac=self.calc_jac, calc_hes=self.calc_hes,
-            params=self.params, map_count=iterations, **self.options)
+            params=params, map_count=iterations, **self.options)
         return slv
+
+    def image(self,
+        y0: Y,
+        params: P,
+        iterations: int = 1
+    ) -> Y:
+        """Calculate image of the Poincare map
+
+        Parameters
+        ----------
+        y0 : numpy.ndarray | float
+            Element to calculate the image under the Poincare map.
+        iterations : int, optional
+            Count of the iteration of the map, by default `1`.
+
+        Returns
+        -------
+        numpy.ndarray | float
+            The image of y0 under the map.
+        """
+        slv = solve_ivbmp(
+            y0, self.all_modes, self.trans,
+            self.initial_mode, end_mode=self.initial_mode,
+            calc_jac=False, calc_hes=False,
+            params=params, map_count=iterations, **self.options
+        )
+        return slv.y

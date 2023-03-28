@@ -6,11 +6,12 @@ Useful tools for analysis
 .. autosummary::
     :toctree: generated/
 
-    DictVector
+    continuation
 
 """
-from ._dict_vector import *
 
-__all__ = [
-    "DictVector"
-]
+from . import _continuation
+from ._continuation import *
+
+__all__ = []
+__all__.extend(_continuation.__all__.copy())

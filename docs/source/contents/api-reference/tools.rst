@@ -14,4 +14,4 @@ Classes
 .. autosummary::
     :toctree: generated/
 
-    DictVector
+    continuation
