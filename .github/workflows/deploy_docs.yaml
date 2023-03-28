@@ -47,7 +47,9 @@ jobs:
 
       - name: Remove current directory
         run: |
-          [ -e $GITHUB_REF_NAME ] && rm -r $GITHUB_REF_NAME
+          if test -f $GITHUB_REF_NAME; then
+            rm -r $GITHUB_REF_NAME
+          fi
 
       - name: Download Artifact
         uses: actions/download-artifact@v3
