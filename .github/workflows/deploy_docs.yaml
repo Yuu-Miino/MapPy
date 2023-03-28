@@ -52,7 +52,13 @@ jobs:
       - name: Download Artifact
         uses: actions/download-artifact@v3
         with:
-          name: $GITHUB_REF_NAME
+          name: html
+          path: _download
+
+      - name: Setup downloaded artifact
+        run: |
+          mv _download/html $GITHUB_REF_NAME
+          rmdir _download
 
       - name: Update latest link
         run: bash update_latest.sh
