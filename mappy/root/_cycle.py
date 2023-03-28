@@ -1,9 +1,10 @@
 """Cycle (periodic point)
 """
-from typing import TypeVar
+from typing import TypeVar, Generic
 from mappy import PoincareMap
 import numpy
 from scipy.optimize import root, OptimizeResult
+from ..tools import is_type_of
 
 Y = TypeVar('Y', numpy.ndarray, float)
 P = TypeVar('P', numpy.ndarray, float)
@@ -61,7 +62,7 @@ class ResultDumper:
                 out.append(" ".join(["{:+."+str(precision)+"f}"] * vals.size).format(*vals))
         return " ".join(out)
 
-class FindCycleResult (ResultDumper):
+class FindCycleResult (ResultDumper, Generic[Y]):
     def __init__(
         self,
         success: bool,
@@ -95,12 +96,16 @@ def find_cycle(
     eigvals, eigvecs = None, None
     if rt.success:
         jac = poincare_map.image_detail(rt.x, params, period).jac
-        if isinstance(jac, numpy.ndarray):
-            eigvals, eigvecs = numpy.linalg.eig(jac)
-        else:
-            eigvals = jac
+        if jac is not None:
+            if isinstance(jac, numpy.ndarray):
+                eigvals, eigvecs = numpy.linalg.eig(jac)
+            else:
+                eigvals = jac
 
-    result = FindCycleResult (
+    if not is_type_of(eigvals, type(y0)) and eigvals is not None:
+        raise TypeError((type(eigvals), type(y0)))
+
+    result = FindCycleResult[Y] (
         success=rt.success,
         y=numpy.squeeze(rt.x),
         eigvals = eigvals,

@@ -1,35 +1,18 @@
 """Fundamental classes and functions
 """
-from typing import TypeVar
+from typing import Any, Generic, TypeVar, ClassVar
 from collections.abc import Callable
 from functools import wraps
 import numpy
 from scipy.integrate import solve_ivp, OdeSolution
 numpy.set_printoptions(precision=12)
 import sympy
+from ..tools import is_type_of
 
-__all__ = [
-    "solve_ivbmp",
-    "PoincareMap",
-    "SolveIvbmpResult",
-    "ContinuousMode",
-    "DiscreteMode",
-    "ModeStepResult",
-    "Mode",
-    "SomeJacUndefined",
-    "SomeHesUndefined",
-    "TransitionKeyError",
-    "AllModesKeyError"
-]
-
-
-P = TypeVar('P', numpy.ndarray, float)
 Y = TypeVar('Y', numpy.ndarray, float)
 YF = TypeVar('YF', numpy.ndarray, float)
-YJ = TypeVar('YJ', numpy.ndarray, float)
-YH = TypeVar('YH', numpy.ndarray, float)
-YBJ = TypeVar('YBJ', numpy.ndarray, float)
-YBH = TypeVar('YBH', numpy.ndarray, float)
+YB = TypeVar('YB', bound=float)
+P = TypeVar('P', numpy.ndarray, float)
 
 class TransitionKeyError (Exception):
     """Exception for the undefined transition
@@ -46,7 +29,7 @@ class AllModesKeyError (Exception):
     def __str__(self) -> str:
         return (f'[All modes] Mode with name `{self.modename}` is undefined.')
 
-class ModeStepResult:
+class ModeStepResult(Generic[Y]):
     """Result of `step` in `Mode`
 
     The ModeStepResult class provides the result of `step` in the mode.
@@ -72,7 +55,7 @@ class ModeStepResult:
     """
     def __init__(self,
         status: int,
-        y: numpy.ndarray | float,
+        y: Y,
         tend: float | None = None,
         jac: numpy.ndarray | float | None = None,
         hes: numpy.ndarray | float | None = None,
@@ -90,7 +73,7 @@ class ModeStepResult:
     def __repr__(self) -> str:
         return str(self.__dict__)
 
-class Mode:
+class Mode(Generic[Y, P, YF]):
     """Parent Class of all modes
 
     Parent Class of all modes
@@ -108,7 +91,7 @@ class Mode:
         Count of the common system parameters.
 
     """
-    parameters: int
+    parameters: ClassVar[int]
 
     def __init__(self,
         name: str,
@@ -152,7 +135,11 @@ class Mode:
     def __eq__(self, x): return x is self
     def __ne__(self, x): return x is not self
 
-    def step(self, y0: numpy.ndarray | float, params = None, **options) -> ModeStepResult:
+    def step(self,
+        y0: Y,
+        params: P | None = None,
+        **options
+    ) -> ModeStepResult[YF]:
         """Step to the next mode
 
         Step to the next mode
@@ -173,7 +160,7 @@ class Mode:
 
         return NotImplemented
 
-class ContinuousMode (Mode):
+class ContinuousMode (Mode[Y, P, YF]):
     """Mode for the continuos-time dynamical system
 
     Mode for the continuos-time dynamical system
@@ -226,7 +213,10 @@ class ContinuousMode (Mode):
             hes_fun = sympy.lambdify((x_symb, p_symb), hess, 'numpy')
             self.hes_borders.append(hes_fun)
 
-    def __ode_jac (self, y: numpy.ndarray, params = None) -> numpy.ndarray:
+    def __ode_jac (self,
+            y: numpy.ndarray,
+            params: P | None = None
+        ) -> numpy.ndarray:
         dim = self.fun.dom_dim
         dydy0 = y[dim:dim+(dim**2)].reshape((dim, dim), order='F')
 
@@ -242,7 +232,7 @@ class ContinuousMode (Mode):
 
     def __ode_hes (self,
             y: numpy.ndarray,
-            params = None
+            params: P | None = None
         ) -> numpy.ndarray:
         dim = self.fun.dom_dim
 
@@ -314,9 +304,9 @@ class ContinuousMode (Mode):
         Callable
             Decorated `border` function compatible with `ContinuousTimeMode`
         """
-        def _decorator(fun: Callable[[Y, P], YF]) -> Callable[[Y, P], YF]:
+        def _decorator(fun: Callable[[Y, P], YB]) -> Callable[[Y, P], YB]:
             @wraps(fun)
-            def _wrapper(y: Y, p: P) -> YF:
+            def _wrapper(y: Y, p: P) -> YB:
                 ret = fun(y, p)
                 return ret
             setattr(_wrapper, 'direction', direction)
@@ -324,12 +314,12 @@ class ContinuousMode (Mode):
         return _decorator
 
     def step(self,
-        y0: numpy.ndarray | float,
-        params = None,
+        y0: Y,
+        params: P | None = None,
         calc_jac = True,
         calc_hes = True,
         **options
-    )->ModeStepResult:
+    )->ModeStepResult[YF]:
         """Step to the next mode
 
         Step to the next mode
@@ -401,7 +391,7 @@ class ContinuousMode (Mode):
         sol = solve_ivp(ode, [0, self.max_interval], y0in, events=borders, **options)
 
         ## Set values to the result instance
-        y1  = sol.y.T[-1][0:dim] if dim != 1 else sol.y.T[-1][0]
+        y1: YF = sol.y.T[-1][0:dim] if dim != 1 else sol.y.T[-1][0]
 
         if calc_jac: # If calculate Jacobian matrix
             jact = numpy.array(sol.y.T[-1][dim:dim+(dim**2)]).reshape((dim, dim), order='F')
@@ -447,13 +437,13 @@ class ContinuousMode (Mode):
                     i_border = i
 
         # Make a response instance
-        result = ModeStepResult(sol.status, y1, tend=sol.t[-1], jac=jac, hes=hes, i_border=i_border)
+        result = ModeStepResult[YF](sol.status, y1, tend=sol.t[-1], jac=jac, hes=hes, i_border=i_border)
         if options.get('dense_output'):
             result.sol = sol.sol
 
         return result
 
-class DiscreteMode (Mode):
+class DiscreteMode (Mode[Y, P, YF]):
     """Mode of the discrete-time dynamical system
 
     Mode of the discrete-time dynamical system
@@ -464,10 +454,6 @@ class DiscreteMode (Mode):
         Name of the mode.
     fun : Callable
         Right-hand side of the discrete-time dynamical system. The calling signature is fun(y).
-    jac_fun : Callable or None, optional
-        Jacobian matrix of the right-hand side of the system with respect to y, by default `None`.
-    hes_fun : Callable or None, optional
-        Hessian tensor of the right-hand side of the system with respect to y, by default `None`.
     """
 
     def __init__(self,
@@ -505,12 +491,12 @@ class DiscreteMode (Mode):
         return _decorator
 
     def step(self,
-        y0: numpy.ndarray | float,
-        params = None,
+        y0: Y,
+        params: P | None = None,
         calc_jac = True,
         calc_hes = True,
         **options
-    ) -> ModeStepResult:
+    ) -> ModeStepResult[YF]:
         """Step to the next mode
 
         Step to the next mode
@@ -520,7 +506,7 @@ class DiscreteMode (Mode):
         y0 : numpy.ndarray or float
             The initial state y0 of the system evolution.
         params : Any, optional
-            Arguments to pass to `fun` and `jac_fun`, by default None.
+            Arguments to pass to `fun`, by default None.
         calc_jac : Boolean, optional
             Flag to calculate the Jacobian matrix of the map from initial value to the result y, by default `True`.
         calc_hes : Boolean, optional
@@ -535,7 +521,7 @@ class DiscreteMode (Mode):
 
         """
         ## Setup
-        y1  = y0 if isinstance(y0, float) else y0.copy()
+        y0in: Y = y0 if isinstance(y0, float) else y0.copy()
         i_border: int | None = None
         jac = None
         hes = None
@@ -558,16 +544,24 @@ class DiscreteMode (Mode):
             mapT = lambda n, y: numpy.array(self.fun(y, params))
 
         ## Main part
-        sol  = mapT(0, y1)
+        sol  = mapT(0, y0in)
 
-        cod_dim = self.fun.cod_dim
-        dom_dim = self.fun.dom_dim
-        if isinstance(sol, float):
-            y1 = sol
+        cod_dim: int = self.fun.cod_dim
+        dom_dim: int = self.fun.dom_dim
+        y1 = self.fun(y0in, params)
+        if not isinstance(y1, numpy.ndarray):
+            y1 = float(y1)
+
+        if isinstance(sol, float) or sol.size == 1:
+            tmp = float(sol)
         elif cod_dim == 1:
-            y1 = sol if sol.size == 1 else sol[0]
+            tmp = sol[0]
         else:
-            y1 = sol[0:cod_dim]
+            tmp = sol[0:cod_dim]
+
+        if not is_type_of(tmp, type(y1)):
+            raise TypeError((type(tmp), type(y1)))
+        y1 = tmp
 
         if calc_jac:
             af = cod_dim
@@ -578,11 +572,11 @@ class DiscreteMode (Mode):
             at = af + (dom_dim*cod_dim) * dom_dim
             hes = sol[af:at].reshape((dom_dim, cod_dim, dom_dim), order='F')
 
-        result = ModeStepResult(status=0, y=y1, jac=jac, hes=hes, i_border=i_border)
+        result = ModeStepResult[YF](status=0, y=y1, jac=jac, hes=hes, i_border=i_border)
 
         return result
 
-class SolveIvbmpResult:
+class SolveIvbmpResult(Generic[Y]):
     """Result of `solve_ivbmp`
 
     Result of `solve_ivbmp`
@@ -598,16 +592,16 @@ class SolveIvbmpResult:
     eigvals : numpy.ndarray, float or None, optional
         Eigenvalues of the Jacobian matrix, by default `None`.
     eigvecs : numpy.ndarray or None, optional
-        Eigenvectors corresponding to `eigs`, by default `None`.
+        Eigenvectors corresponding to `eigvals`, by default `None`.
     hes : numpy.ndarray, float, or None, optional
         Hessian tensor of the map, by default `None`.
     """
     def __init__(self,
-        y: numpy.ndarray | float,
+        y: Y,
         trans_history: list[str],
         jac: numpy.ndarray | float | None = None,
-        eigvals: numpy.ndarray | float | None = None,
-        eigvecs: numpy.ndarray | None = None,
+        eigvals: Y | None = None,
+        eigvecs: numpy.ndarray | float | None = None,
         hes: numpy.ndarray | float | None = None,
     ) -> None:
         self.y = y
@@ -632,14 +626,14 @@ class SomeHesUndefined(Exception):
         return "Some mode does not implement Hessian tensor calculation."
 
 def solve_ivbmp(
-    y0: numpy.ndarray | float,
+    y0: Y,
     all_modes: tuple[Mode, ...],
     trans: dict[str, str | list[str]],
     initial_mode: str,
     end_mode: str | None = None,
     calc_jac: bool = True,
     calc_hes: bool = False,
-    params = None,
+    params: P | None = None,
     rtol=1e-6,
     map_count=1
 ) -> SolveIvbmpResult:
@@ -707,10 +701,14 @@ def solve_ivbmp(
     hes = None
     count = 0
 
+    y0in = y0 if isinstance(y0, float) else y0.copy()
+
     for _ in range(map_count):
         while 1:
-            result = current_mode.step(y0, params=params, calc_jac=calc_jac, calc_hes=calc_hes, rtol=rtol)
-            y0 = result.y
+            result = current_mode.step(y0in, params=params, calc_jac=calc_jac, calc_hes=calc_hes, rtol=rtol)
+            y0in = result.y
+            if not isinstance(y0in, numpy.ndarray) or y0in.size == 1:
+                y0in = float(y0in)
 
             if calc_jac:
                 if result.jac is not None:
@@ -756,17 +754,28 @@ def solve_ivbmp(
             jac = float(jac)
             eigs = jac
         else:
-            jac = numpy.squeeze(jac)
-            eigs, eigv = numpy.linalg.eig(jac)
+            try:
+                jac = numpy.squeeze(jac)
+                eigs, eigv = numpy.linalg.eig(jac)
+            except:
+                pass
     if hes is not None:
-        if hes.size == 1:
+        if isinstance(hes, float) or hes.size == 1:
             hes = float(hes)
         else:
             hes = numpy.squeeze(hes)
 
-    return SolveIvbmpResult( y0, trans_history, jac, eigs, eigv, hes)
+    if not is_type_of(y0in, numpy.ndarray) and not is_type_of(y0in, float):
+        raise TypeError(type(y0in))
 
-class PoincareMap():
+    if not is_type_of(eigs, type(y0in)) and eigs is not None:
+        raise TypeError((type(eigs), type(y0in)))
+
+    # TODO: Any is not good
+    return SolveIvbmpResult[Any](
+        y0in, trans_history, jac, eigs, eigv, hes)
+
+class PoincareMap(Generic[Y, P]):
     """Construct Poincare map
 
     Construct Poincare map
@@ -806,9 +815,9 @@ class PoincareMap():
 
     def image_detail(self,
         y0: Y,
-        params: P,
+        params: P | None,
         iterations: int = 1
-    ):
+    ) -> SolveIvbmpResult[Y]:
         """Calculate image of the Poincare map with detailed information
 
         Parameters
@@ -832,7 +841,7 @@ class PoincareMap():
 
     def image(self,
         y0: Y,
-        params: P,
+        params: P | None = None,
         iterations: int = 1
     ) -> Y:
         """Calculate image of the Poincare map

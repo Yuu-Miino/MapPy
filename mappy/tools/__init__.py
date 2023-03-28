@@ -11,3 +11,4 @@ Useful tools for analysis
 """
 
 from ._continuation import *
+from ._type import *

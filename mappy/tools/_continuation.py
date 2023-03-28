@@ -3,6 +3,7 @@
 from collections.abc import Callable
 from typing import TypeVar
 import numpy
+from ._type import is_type_of
 
 Y = TypeVar('Y', numpy.ndarray, float)
 P = TypeVar('P', numpy.ndarray, float)
@@ -53,7 +54,7 @@ def continuation(
         h = (end_val-params[param_idx])/resolution
 
     y = y0 if isinstance(y0, float) else y0.copy()
-    p = params.copy()
+    p = params if isinstance(params, float) else params.copy()
     for i in range(resolution+1):
         ret = fun(y, p)
 
@@ -62,7 +63,7 @@ def continuation(
                 break
 
         if verbose:
-            if isinstance(params, float):
+            if isinstance(p, float):
                 out = f"{p:.{verbose_precision}f}"
             else:
                 out = " ".join(["{:."+str(verbose_precision)+"f}"] * len(p)).format(*p)
@@ -72,9 +73,16 @@ def continuation(
 
         if hasattr(ret, 'y'):
             y = ret.y
+            if not isinstance(y, numpy.ndarray) or y.size == 1:
+                y = float(y)
         if i != resolution:
-            if isinstance(params, float):
+            if isinstance(p, float):
                 p += h
             else:
                 p[param_idx] += h
+    if not is_type_of(y, type(y0)):
+        raise TypeError(type(y), type(y0))
+    if not is_type_of(p, type(params)):
+        raise TypeError(type(p), type(params))
+
     return (y, p)

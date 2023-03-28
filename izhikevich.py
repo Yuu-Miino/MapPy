@@ -1,6 +1,6 @@
 import numpy as np
 from mappy import ContinuousMode as CM, DiscreteMode as DM, PoincareMap, Mode
-from mappy.root import find_cycle
+from mappy.root import *
 from mappy.tools import continuation
 
 Mode.parameters = 5
@@ -41,11 +41,11 @@ def main ():
     param = {
         'a': 0.2,
         'b': 0.2,
-        'c': -50,
+        'c': -50.0,
         'd': 2.0,
-        'I': 10
+        'I': 10.0
     }
-    param_list = list(param.values())
+    param_list = np.array(list(param.values()))
 
     all_modes = (
         DM('m0', p),
