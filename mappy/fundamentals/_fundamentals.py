@@ -1,6 +1,6 @@
 """Fundamental classes and functions
 """
-from typing import Any, Generic, TypeVar, ClassVar
+from typing import Any, Generic, TypeVar, ClassVar, TypeAlias
 from collections.abc import Callable
 from functools import wraps
 import numpy
@@ -12,7 +12,7 @@ from ..tools import is_type_of
 Y = TypeVar('Y', numpy.ndarray, float)
 YF = TypeVar('YF', numpy.ndarray, float)
 YB = TypeVar('YB', bound=float)
-P = TypeVar('P', numpy.ndarray, float)
+P: TypeAlias = dict[str, Any]
 
 class TransitionKeyError (Exception):
     """Exception for the undefined transition
@@ -79,7 +79,7 @@ class ModeStepResult(Generic[Y]):
     def __repr__(self) -> str:
         return str(self.__dict__)
 
-class Mode(Generic[Y, P, YF]):
+class Mode(Generic[Y, YF]):
     """Parent Class of all modes
 
     Parent Class of all modes
@@ -108,10 +108,11 @@ class Mode(Generic[Y, P, YF]):
 
         # Jacobian for fun by SymPy
         x_symb = sympy.symbols(' '.join([f'x_{i}' for i in range(self.fun.dom_dim)]))
-        if Mode.parameters > 0:
-            p_symb = sympy.symbols(' '.join([f'p_{i}' for i in range(Mode.parameters)]))
-        else:
-            p_symb = None
+        p_symb: P | None = None
+        p_symb_list: list[sympy.Symbol] | None = None
+        if len(self.fun.param_keys) > 0:
+            p_symb = {k: sympy.Symbol(k) for k in self.fun.param_keys}
+            p_symb_list = list(p_symb.values())
         if hasattr(self.fun, 'cod_dim') and self.fun.cod_dim == 1:
             f = sympy.Matrix([fun(x_symb, p_symb)])
         else:
@@ -124,7 +125,13 @@ class Mode(Generic[Y, P, YF]):
                 jac = sympy.derive_by_array(f, x_symb)
             else:
                 jac = f.jacobian(x_symb)
-        jac_fun = sympy.lambdify((x_symb, p_symb), jac, 'numpy')
+        if p_symb is None:
+            jac_fun: Callable[[Y, P | None], numpy.ndarray] = lambda x, _: \
+                sympy.lambdify([x_symb], expr=jac, modules='numpy')(x)
+        else:
+            jac_fun: Callable[[Y, P | None], numpy.ndarray] = lambda x, pdic: \
+                sympy.lambdify((x_symb, p_symb_list), jac, 'numpy')(x, pdic if pdic is None else \
+                list({k:pdic[k] for k in pdic if k in self.fun.param_keys}.values()))
         if jac_fun is None:
             raise Exception('lambdify returns None')
         self.jac_fun = jac_fun
@@ -134,7 +141,13 @@ class Mode(Generic[Y, P, YF]):
             hess = sympy.diff(jac, x_symb)
         else:
             hess = sympy.derive_by_array(jac, x_symb)
-        hes_fun = sympy.lambdify((x_symb, p_symb), hess, 'numpy')
+        if p_symb is None:
+            hes_fun: Callable[[Y, P | None], numpy.ndarray] = lambda x, _: \
+                sympy.lambdify([x_symb], hess, 'numpy')(x)
+        else:
+            hes_fun: Callable[[Y, P | None], numpy.ndarray] = lambda x, pdic: \
+                sympy.lambdify((x_symb, p_symb_list), hess, 'numpy')(x, pdic if pdic is None else \
+                list({k:pdic[k] for k in pdic if k in self.fun.param_keys}.values()))
         self.hes_fun = hes_fun
 
     def __hash__(self): return hash(id(self))
@@ -166,7 +179,7 @@ class Mode(Generic[Y, P, YF]):
 
         return NotImplemented
 
-class ContinuousMode (Mode[Y, P, YF]):
+class ContinuousMode (Mode[Y, YF]):
     """Mode for the continuos-time dynamical system
 
     Mode for the continuos-time dynamical system
@@ -269,7 +282,7 @@ class ContinuousMode (Mode[Y, P, YF]):
         return deriv
 
     @classmethod
-    def function(cls, dimension: int) -> Callable:
+    def function(cls, dimension: int, param_keys: list[str] = []) -> Callable:
         """Decorator for `fun` in `ContinuousTimeMode`
 
         Decorator for `fun` in `ContinuousTimeMode`
@@ -290,6 +303,7 @@ class ContinuousMode (Mode[Y, P, YF]):
                 ret = fun(y, p)
                 return ret
             setattr(_wrapper, 'dom_dim', dimension)
+            setattr(_wrapper, 'param_keys', param_keys)
             return _wrapper
         return _decorator
 
@@ -449,7 +463,7 @@ class ContinuousMode (Mode[Y, P, YF]):
 
         return result
 
-class DiscreteMode (Mode[Y, P, YF]):
+class DiscreteMode (Mode[Y, YF]):
     """Mode of the discrete-time dynamical system
 
     Mode of the discrete-time dynamical system
@@ -469,7 +483,7 @@ class DiscreteMode (Mode[Y, P, YF]):
         super().__init__(name, fun)
 
     @classmethod
-    def function(cls, domain_dimension: int, codomain_dimension: int) -> Callable:
+    def function(cls, domain_dimension: int, codomain_dimension: int, param_keys: list[str] = []) -> Callable:
         """Decorator for `fun` in `DiscreteTimeMode`
 
         Decorator for `fun` in `DiscreteTimeMode`
@@ -493,6 +507,7 @@ class DiscreteMode (Mode[Y, P, YF]):
                 return ret
             setattr(_wrapper, 'dom_dim', domain_dimension)
             setattr(_wrapper, 'cod_dim', codomain_dimension)
+            setattr(_wrapper, 'param_keys', param_keys)
             return _wrapper
         return _decorator
 
@@ -664,7 +679,7 @@ def solve_ivbmp(
         Flag to calculate the Jacobian matrix, by default `True`.
     calc_hes : bool, optional
         Flag to calculate the Hessian tensor, by default `True`.
-    params : Any, optional
+    params : Parameter, optional
         Parameter to pass to `fun` in all `mode`, by default None.
     rtol : float, optional
         Relative torelance to pass to `solve_ivp`, by default `1e-6`.
@@ -692,7 +707,7 @@ def solve_ivbmp(
         return SolveIvbmpResult[float](
             y0in, trans_history, jac, eigs, eigv, hes)
 
-class PoincareMap(Generic[Y, P]):
+class PoincareMap(Generic[Y]):
     """Construct Poincare map
 
     Construct Poincare map
@@ -814,7 +829,7 @@ def solve_poincare_map(
         Flag to calculate the Jacobian matrix, by default `True`.
     calc_hes : bool, optional
         Flag to calculate the Hessian tensor, by default `True`.
-    params : Any, optional
+    params : Parameter, optional
         Parameter to pass to `fun` in all `mode`, by default None.
     rtol : float, optional
         Relative torelance to pass to `solve_ivp`, by default `1e-6`.
@@ -876,7 +891,7 @@ def _exec_calculation (
 
     y0in = y0 if isinstance(y0, float) else y0.copy()
 
-    for _ in range(map_count):
+    for i in range(map_count):
         while 1:
             result = current_mode.step(y0in, params=params, calc_jac=calc_jac, calc_hes=calc_hes, rtol=rtol)
             if result.status == 0:

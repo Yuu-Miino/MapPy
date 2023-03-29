@@ -1,19 +1,19 @@
 """Parameter continuation with given function
 """
 from collections.abc import Callable
-from typing import TypeVar
+from typing import TypeVar, TypeAlias, Any
 import numpy
 from ._type import is_type_of
 
 Y = TypeVar('Y', numpy.ndarray, float)
-P = TypeVar('P', numpy.ndarray, float)
+P: TypeAlias = dict[str, Any]
 
 def continuation(
     fun: Callable,
     y0: Y,
     params: P,
     end_val: float,
-    param_idx: int = 0,
+    param_idx: str,
     resolution: int = 100,
     show_progress: bool = False,
 ) -> list[dict[str, Y | P]]:
@@ -40,13 +40,10 @@ def continuation(
         Final value of `y` and `params`.
     """
 
-    if isinstance(params, float):
-        h = (end_val-params)/(resolution-1)
-    else:
-        h = (end_val-params[param_idx])/(resolution-1)
+    h = (end_val-params[param_idx])/(resolution-1)
 
     y = y0 if isinstance(y0, float) else y0.copy()
-    p = params if isinstance(params, float) else params.copy()
+    p = params.copy()
 
     found: list[dict[str, Y | P]] = []
 
@@ -59,16 +56,6 @@ def continuation(
         if not ret.success:
             break
 
-        if show_progress:
-            precision = 10
-            show_str: list[str] = ["\tSUCCESS" if ret.success else "FAILURE", f"{i+1:04d}"]
-            for val in [y, p]:
-                if isinstance(val, float) or val.size == 1:
-                    show_str.append(f"{val:+.{precision}f}")
-                else:
-                    show_str.append(" ".join(["{:+."+str(precision)+"f}"] * len(val)).format(*val))
-            print(" ".join(show_str), end="\r")
-
         y = ret.y
         p = ret.p
 
@@ -78,13 +65,20 @@ def continuation(
         if not isinstance(y, numpy.ndarray) or y.size == 1:
             y = float(y)
 
-        if not isinstance(p, numpy.ndarray) or p.size == 1:
-            p = float(p)
-
         if not is_type_of(y, type(y0)):
             raise TypeError(type(y), type(y0))
         if not is_type_of(p, type(params)):
             raise TypeError(type(p), type(params))
+
+        if show_progress:
+            precision = 10
+            show_str: list[str] = ["\tSUCCESS" if ret.success else "FAILURE", f"{i+1:04d}"]
+            for val in [y, list(p.values())]:
+                if isinstance(val, float) or len(val) == 1:
+                    show_str.append(f"{val:+.{precision}f}")
+                else:
+                    show_str.append(" ".join(["{:+."+str(precision)+"f}"] * len(val)).format(*val))
+            print(" ".join(show_str), end="\r")
 
         found.append({
             'y': y,
@@ -92,10 +86,7 @@ def continuation(
         })
 
         if i != resolution-1:
-            if isinstance(p, float):
-                p += h
-            else:
-                p[param_idx] += h
+            p[param_idx] += h
     if show_progress: print()
     return found
 

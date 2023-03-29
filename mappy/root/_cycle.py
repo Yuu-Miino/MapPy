@@ -1,13 +1,13 @@
 """Cycle (periodic point)
 """
-from typing import TypeVar, Generic
+from typing import TypeVar, Generic, TypeAlias, Any
 from mappy import PoincareMap
 import numpy
 from scipy.optimize import root, OptimizeResult
 from ..tools import is_type_of, ContinuationFunResult, continuation
 
 Y = TypeVar('Y', numpy.ndarray, float)
-P = TypeVar('P', numpy.ndarray, float)
+P: TypeAlias = dict[str, Any]
 
 def _cond_cycle(
     pmap: PoincareMap,
@@ -130,7 +130,7 @@ def trace_cycle(
     poincare_map: PoincareMap,
     y0: Y,
     params: P,
-    cnt_param_idx: int,
+    cnt_param_idx: str,
     end_val: float,
     resolution: int = 100,
     period: int = 1,
