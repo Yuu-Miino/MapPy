@@ -15,8 +15,8 @@ Find cycles
     :toctree: generated/
 
     find_cycle
+    trace_cycle
     FindCycleResult
-    ResultDumper
 
 Find Local Bifurcation Set
 --------------------------
@@ -25,3 +25,6 @@ Find Local Bifurcation Set
     :toctree: generated/
 
     find_local_bf
+    trace_local_bf
+    FindLocalBfResult
+    ParameterKeyError

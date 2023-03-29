@@ -29,6 +29,12 @@ class AllModesKeyError (Exception):
     def __str__(self) -> str:
         return (f'[All modes] Mode with name `{self.modename}` is undefined.')
 
+class NextModeNotFoundError (Exception):
+    """Exception that the next mode is not found
+    """
+    def __str__(self) -> str:
+        return (f'[Next mode] Not found next mode. The ODE solver finished with status `0`.')
+
 class ModeStepResult(Generic[Y]):
     """Result of `step` in `Mode`
 
@@ -37,8 +43,8 @@ class ModeStepResult(Generic[Y]):
     Parameters
     ----------
     status : int
-        Response status of solve_ivp for the continuous mode.
-        `0` for the discrete mode.
+        Response status of `solve_ivp` for the continuous mode.
+        `1` for the discrete mode.
     y : numpy.ndarray or float
         Value of the solution after step.
     tend : float or None, optional
@@ -572,7 +578,7 @@ class DiscreteMode (Mode[Y, P, YF]):
             at = af + (dom_dim*cod_dim) * dom_dim
             hes = sol[af:at].reshape((dom_dim, cod_dim, dom_dim), order='F')
 
-        result = ModeStepResult[YF](status=0, y=y1, jac=jac, hes=hes, i_border=i_border)
+        result = ModeStepResult[YF](status=1, y=y1, jac=jac, hes=hes, i_border=i_border)
 
         return result
 
@@ -669,16 +675,6 @@ def solve_ivbmp(
     -------
     SolveIvbmpResult
 
-    Raises
-    ------
-    SomeJacUndefined
-        Error of not implemented Jacobian matrix calculation.
-    SomeHesUndefined
-        Error of not implemented Hessian tensor calculation.
-    TransitionKeyError
-        Error of undefined transition rule.
-    AllModesKeyError
-        Error of undefined mode.
     """
 
     y0in, jac, eigs, eigv, hes, trans_history = _exec_calculation(
@@ -829,16 +825,6 @@ def solve_poincare_map(
     -------
     SolveIvbmpResult
 
-    Raises
-    ------
-    SomeJacUndefined
-        Error of not implemented Jacobian matrix calculation.
-    SomeHesUndefined
-        Error of not implemented Hessian tensor calculation.
-    TransitionKeyError
-        Error of undefined transition rule.
-    AllModesKeyError
-        Error of undefined mode.
     """
     y0in, jac, eigs, eigv, hes, trans_history = _exec_calculation(
         y0, map_count, calc_jac, calc_hes, rtol, trans, all_modes, initial_mode, initial_mode, params
@@ -893,6 +879,9 @@ def _exec_calculation (
     for _ in range(map_count):
         while 1:
             result = current_mode.step(y0in, params=params, calc_jac=calc_jac, calc_hes=calc_hes, rtol=rtol)
+            if result.status == 0:
+                raise NextModeNotFoundError
+
             y0in = result.y
             if not isinstance(y0in, numpy.ndarray) or y0in.size == 1:
                 y0in = float(y0in)

@@ -15,4 +15,5 @@ Methods
     :toctree: generated/
 
     continuation
+    ContinuationFunResult
     is_type_of

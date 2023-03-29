@@ -1,7 +1,6 @@
 import numpy as np
 from mappy import ContinuousMode as CM, DiscreteMode as DM, PoincareMap, Mode
 from mappy.root import *
-from mappy.tools import continuation
 
 Mode.parameters = 5
 
@@ -64,12 +63,24 @@ def main ():
 
     pmap = PoincareMap(all_modes, transitions, 'm0', calc_jac=True, calc_hes=True)
 
-    # print(pmap.image(y0, param_list))
-    # ret = find_cycle(pmap, y0, param_list)
-    # print(ret)
+    res = trace_cycle(pmap, y0, param_list, 4, 4.5, show_progress=True)
 
-    l = lambda y, p: find_cycle(pmap, y, p)
-    print(continuation(l, y0, param_list, 0.3, 0, verbose=True, verbose_precision=8))
+    y1 = res[-1]['y']
+    p1 = res[-1]['params']
+    if not is_type_of(y1, type(y0)) or not is_type_of(p1, type(param_list)):
+        raise Exception
+
+    ret = trace_local_bf (
+        poincare_map=pmap,
+        y0=y1,
+        params=p1,
+        bf_param_idx=4,
+        theta=3.14,
+        cnt_param_idx=0,
+        end_val= 0.3,
+        show_progress=True
+    )
+    print(len(ret))
 
 if __name__=="__main__":
     main()
