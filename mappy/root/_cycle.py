@@ -88,7 +88,8 @@ def find_cycle(
     y0: Y,
     params: P,
     period: int = 1
-):
+) -> FindCycleResult[Y]:
+
     objective_fun = lambda y: cond_cycle(poincare_map, y, params, period)
 
     rt: OptimizeResult = root(objective_fun, y0)
@@ -102,12 +103,20 @@ def find_cycle(
             else:
                 eigvals = jac
 
+    x = rt.x
+
+    if isinstance(y0, float) and (isinstance(x, numpy.ndarray) and x.size == 1):
+        x = float(x)
+
+    if not is_type_of(x, type(y0)):
+        raise TypeError(type(x), type(y0))
+
     if not is_type_of(eigvals, type(y0)) and eigvals is not None:
         raise TypeError((type(eigvals), type(y0)))
 
     result = FindCycleResult[Y] (
         success=rt.success,
-        y=numpy.squeeze(rt.x),
+        y=x,
         eigvals = eigvals,
         eigvecs = eigvecs,
         itr=rt.nfev,

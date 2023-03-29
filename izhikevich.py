@@ -45,7 +45,8 @@ def main ():
         'd': 2.0,
         'I': 10.0
     }
-    param_list = np.array(list(param.values()))
+    param_list = list(param.values())
+    param_list = np.array(param_list)
 
     all_modes = (
         DM('m0', p),

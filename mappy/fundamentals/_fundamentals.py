@@ -521,7 +521,7 @@ class DiscreteMode (Mode[Y, P, YF]):
 
         """
         ## Setup
-        y0in: Y = y0 if isinstance(y0, float) else y0.copy()
+        y0in = y0 if isinstance(y0, float) else y0.copy()
         i_border: int | None = None
         jac = None
         hes = None
@@ -625,6 +625,7 @@ class SomeHesUndefined(Exception):
     def __str__(self) -> str:
         return "Some mode does not implement Hessian tensor calculation."
 
+
 def solve_ivbmp(
     y0: Y,
     all_modes: tuple[Mode, ...],
@@ -636,7 +637,7 @@ def solve_ivbmp(
     params: P | None = None,
     rtol=1e-6,
     map_count=1
-) -> SolveIvbmpResult:
+) -> SolveIvbmpResult[numpy.ndarray] | SolveIvbmpResult[float]:
     """Solve the initial value and boundary **modes** problem of the hybrid dynamical system
 
     Solve the initial value and boundary **modes** problem of the hybrid dynamical system
@@ -679,7 +680,193 @@ def solve_ivbmp(
     AllModesKeyError
         Error of undefined mode.
     """
-    result = None
+
+    y0in, jac, eigs, eigv, hes, trans_history = _exec_calculation(
+        y0, map_count, calc_jac, calc_hes, rtol, trans, all_modes, initial_mode, end_mode, params
+    )
+
+    if isinstance(y0in, numpy.ndarray):
+        if isinstance(eigs, float):
+            raise TypeError
+        return SolveIvbmpResult[numpy.ndarray](
+            y0in, trans_history, jac, eigs, eigv, hes)
+    else:
+        if isinstance(eigs, numpy.ndarray):
+            raise TypeError
+        return SolveIvbmpResult[float](
+            y0in, trans_history, jac, eigs, eigv, hes)
+
+class PoincareMap(Generic[Y, P]):
+    """Construct Poincare map
+
+    Construct Poincare map
+
+    Parameters
+    ----------
+    all_modes : tuple[Mode, ...]
+        Tuple containing all modes.
+    trans : dict[str, str  |  list[str]]
+        Dictionary defining transition rule.
+    initial_mode : str
+        Initial mode of the Poincare map.
+    calc_jac : bool, optional
+        Flag to calculate Jacobian matrix of the map, by default `False`.
+    calc_hes : bool, optional
+        Flag to calculate Hessian matrix of the map, by default `False`.
+    """
+    def __init__(self,
+        all_modes: tuple[Mode, ...],
+        trans: dict[str, str | list[str]],
+        initial_mode: str,
+        calc_jac: bool = False,
+        calc_hes: bool = False,
+        **options
+    ) -> None:
+        self.all_modes = all_modes
+        self.trans = trans
+        self.initial_mode = initial_mode
+        self.calc_jac = calc_jac
+        self.calc_hes = calc_hes
+        self.options = options
+        all_modes_name = [m.name for m in all_modes]
+        if initial_mode not in all_modes_name:
+            raise AllModesKeyError(initial_mode)
+        else:
+            self.dimension = all_modes[all_modes_name.index(initial_mode)].fun.dom_dim
+
+    def image_detail(self,
+        y0: Y,
+        params: P | None,
+        iterations: int = 1
+    ) -> SolveIvbmpResult[Y]:
+        """Calculate image of the Poincare map with detailed information
+
+        Parameters
+        ----------
+        y0 : numpy.ndarray or float
+            Initial state.
+        iterations : int, optional
+            Count of iterations of the map, by default `1`.
+
+        Returns
+        -------
+        SolveIvbmpResult
+            Result of calculation.
+        """
+        slv = solve_poincare_map(
+            y0, self.all_modes, self.trans,
+            self.initial_mode,
+            calc_jac=self.calc_jac, calc_hes=self.calc_hes,
+            params=params, map_count=iterations, **self.options)
+        return slv
+
+    def image(self,
+        y0: Y,
+        params: P | None = None,
+        iterations: int = 1
+    ) -> Y:
+        """Calculate image of the Poincare map
+
+        Parameters
+        ----------
+        y0 : numpy.ndarray | float
+            Element to calculate the image under the Poincare map.
+        iterations : int, optional
+            Count of the iteration of the map, by default `1`.
+
+        Returns
+        -------
+        numpy.ndarray | float
+            The image of y0 under the map.
+        """
+        slv = solve_poincare_map(
+            y0, self.all_modes, self.trans,
+            self.initial_mode,
+            calc_jac=False, calc_hes=False,
+            params=params, map_count=iterations, **self.options
+        )
+        return slv.y
+
+def solve_poincare_map(
+    y0: Y,
+    all_modes: tuple[Mode, ...],
+    trans: dict[str, str | list[str]],
+    initial_mode: str,
+    calc_jac: bool = True,
+    calc_hes: bool = False,
+    params: P | None = None,
+    rtol=1e-6,
+    map_count=1
+) -> SolveIvbmpResult[Y]:
+    """Solve the initial value and boundary **modes** problem of the hybrid dynamical system
+
+    Solve the initial value and boundary **modes** problem of the hybrid dynamical system
+
+    Parameters
+    ----------
+    y0 : numpy.ndarray or float
+        Initial value y0.
+    all_modes : tuple of Modes
+        Set of all modes.
+    trans : dict
+        Transition function that maps from `current mode` to `next mode`.
+    initial_mode : str
+        Name of the initial mode.
+    end_mode : Mode or None, optional
+        Name of the end mode, by default `None`. If `None`, the end mode in the method is the same as `initial_mode`.
+    calc_jac : bool, optional
+        Flag to calculate the Jacobian matrix, by default `True`.
+    calc_hes : bool, optional
+        Flag to calculate the Hessian tensor, by default `True`.
+    params : Any, optional
+        Parameter to pass to `fun` in all `mode`, by default None.
+    rtol : float, optional
+        Relative torelance to pass to `solve_ivp`, by default `1e-6`.
+    map_count : int, optional
+        Count of maps, by default `1`.
+
+    Returns
+    -------
+    SolveIvbmpResult
+
+    Raises
+    ------
+    SomeJacUndefined
+        Error of not implemented Jacobian matrix calculation.
+    SomeHesUndefined
+        Error of not implemented Hessian tensor calculation.
+    TransitionKeyError
+        Error of undefined transition rule.
+    AllModesKeyError
+        Error of undefined mode.
+    """
+    y0in, jac, eigs, eigv, hes, trans_history = _exec_calculation(
+        y0, map_count, calc_jac, calc_hes, rtol, trans, all_modes, initial_mode, initial_mode, params
+    )
+
+    if isinstance(y0, numpy.ndarray) and y0.size == 1:
+        y0in = numpy.array(y0in)
+        eigs = numpy.array(eigs)
+    if not is_type_of(y0in, type(y0)):
+        raise TypeError(y0in, type(y0in), y0, type(y0))
+    if not is_type_of(eigs, type(y0)) and eigs is not None:
+        raise TypeError(eigs, type(eigs), y0, type(y0))
+
+    return SolveIvbmpResult[Y](
+        y0in, trans_history, jac, eigs, eigv, hes)
+
+def _exec_calculation (
+    y0: Y,
+    map_count: int,
+    calc_jac: bool,
+    calc_hes: bool,
+    rtol: float,
+    trans: dict[str, str | list[str]],
+    all_modes: tuple[Mode, ...],
+    initial_mode: str,
+    end_mode: str | None,
+    params: P | None,
+):
     mdi = [m.name for m in all_modes]
     trans_history: list[str] = []
     try:
@@ -754,8 +941,8 @@ def solve_ivbmp(
             jac = float(jac)
             eigs = jac
         else:
-            try:
-                jac = numpy.squeeze(jac)
+            jac = numpy.squeeze(jac)
+            try: # If Jac is square
                 eigs, eigv = numpy.linalg.eig(jac)
             except:
                 pass
@@ -765,103 +952,4 @@ def solve_ivbmp(
         else:
             hes = numpy.squeeze(hes)
 
-    if not is_type_of(y0in, numpy.ndarray) and not is_type_of(y0in, float):
-        raise TypeError(type(y0in))
-
-    if not is_type_of(eigs, type(y0in)) and eigs is not None:
-        raise TypeError((type(eigs), type(y0in)))
-
-    # TODO: Any is not good
-    return SolveIvbmpResult[Any](
-        y0in, trans_history, jac, eigs, eigv, hes)
-
-class PoincareMap(Generic[Y, P]):
-    """Construct Poincare map
-
-    Construct Poincare map
-
-    Parameters
-    ----------
-    all_modes : tuple[Mode, ...]
-        Tuple containing all modes.
-    trans : dict[str, str  |  list[str]]
-        Dictionary defining transition rule.
-    initial_mode : str
-        Initial mode of the Poincare map.
-    calc_jac : bool, optional
-        Flag to calculate Jacobian matrix of the map, by default `False`.
-    calc_hes : bool, optional
-        Flag to calculate Hessian matrix of the map, by default `False`.
-    """
-    def __init__(self,
-        all_modes: tuple[Mode, ...],
-        trans: dict[str, str | list[str]],
-        initial_mode: str,
-        calc_jac: bool = False,
-        calc_hes: bool = False,
-        **options
-    ) -> None:
-        self.all_modes = all_modes
-        self.trans = trans
-        self.initial_mode = initial_mode
-        self.calc_jac = calc_jac
-        self.calc_hes = calc_hes
-        self.options = options
-        all_modes_name = [m.name for m in all_modes]
-        if initial_mode not in all_modes_name:
-            raise AllModesKeyError(initial_mode)
-        else:
-            self.dimension = all_modes[all_modes_name.index(initial_mode)].fun.dom_dim
-
-    def image_detail(self,
-        y0: Y,
-        params: P | None,
-        iterations: int = 1
-    ) -> SolveIvbmpResult[Y]:
-        """Calculate image of the Poincare map with detailed information
-
-        Parameters
-        ----------
-        y0 : numpy.ndarray or float
-            Initial state.
-        iterations : int, optional
-            Count of iterations of the map, by default `1`.
-
-        Returns
-        -------
-        SolveIvbmpResult
-            Result of calculation.
-        """
-        slv = solve_ivbmp(
-            y0, self.all_modes, self.trans,
-            self.initial_mode, end_mode= self.initial_mode,
-            calc_jac=self.calc_jac, calc_hes=self.calc_hes,
-            params=params, map_count=iterations, **self.options)
-        return slv
-
-    def image(self,
-        y0: Y,
-        params: P | None = None,
-        iterations: int = 1
-    ) -> Y:
-        """Calculate image of the Poincare map
-
-        Parameters
-        ----------
-        y0 : numpy.ndarray | float
-            Element to calculate the image under the Poincare map.
-        iterations : int, optional
-            Count of the iteration of the map, by default `1`.
-
-        Returns
-        -------
-        numpy.ndarray | float
-            The image of y0 under the map.
-        """
-        slv = solve_ivbmp(
-            y0, self.all_modes, self.trans,
-            self.initial_mode, end_mode=self.initial_mode,
-            calc_jac=False, calc_hes=False,
-            params=params, map_count=iterations, **self.options
-        )
-        return slv.y
+    return (y0in, jac, eigs, eigv, hes, trans_history)
