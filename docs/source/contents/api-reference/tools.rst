@@ -15,3 +15,4 @@ Classes
     :toctree: generated/
 
     continuation
+    is_type_of
