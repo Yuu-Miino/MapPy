@@ -8,7 +8,7 @@ Tools
 
 .. currentmodule:: mappy.tools
 
-Classes
+Methods
 -------
 
 .. autosummary::

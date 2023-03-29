@@ -18,13 +18,24 @@ __all__ = [
 def cond_cycle(
     pmap: PoincareMap,
     y0: Y,
-    params: P,
+    params: P | None,
     period: int
 ) -> Y:
     y1 = pmap.image(y0, params, period)
     return y1-y0
 
 class ResultDumper:
+    """Class fo result with dumper
+
+    This class implements `dump_values` method.
+    Subclass of `ResultDumper` can use the method
+    to get a string of dumped data.
+
+    Parameters
+    ----------
+    dump_keys : list[str]
+        Keys of the results to dump.
+    """
     def __init__(self, dump_keys: list[str]) -> None:
         self.dump_keys = dump_keys
 
@@ -63,6 +74,25 @@ class ResultDumper:
         return " ".join(out)
 
 class FindCycleResult (ResultDumper, Generic[Y]):
+    """Result of finding a periodic cycle
+
+    Parameters
+    ----------
+    success : bool
+        True if finding is success, or False otherwise.
+    y : numpy.ndarray, float, or None
+        Value of `y` if available.
+    eigvals : numpy.ndarray, float, or None
+        Eigenvalues of the Poincare map at y, if available.
+    eigvecs : numpy.ndarray or None
+        Eigenvectors corresponding to `eigvals` if available.
+    itr : int
+        Count of iterations of the method.
+    err : numpy.ndarray
+        Error of `T(y) - y` in vector form, where `T` is the Poincare map.
+    dump_keys : list, optional
+        Keys to be dumped by the method `dump_values`, by default ['y', 'eigvals']
+    """
     def __init__(
         self,
         success: bool,
@@ -86,15 +116,34 @@ class FindCycleResult (ResultDumper, Generic[Y]):
 def find_cycle(
     poincare_map: PoincareMap,
     y0: Y,
-    params: P,
+    params: P | None = None,
     period: int = 1
 ) -> FindCycleResult[Y]:
+    """Find a periodic cycle of given map
+
+    Parameters
+    ----------
+    poincare_map : PoincareMap
+        Poincare map.
+    y0 : numpy.ndarray or float
+        Initial value for a periodic cycle.
+    params : numpy.ndarray, float, or None
+        Parameter array to pass to `poincare_map`, by default `None`.
+    period : int, optional
+        Period of the target periodic cycle, by default `1`.
+
+    Returns
+    -------
+    FindCycleResult
+        Instance containing the result of finding calculation
+
+    """
 
     objective_fun = lambda y: cond_cycle(poincare_map, y, params, period)
 
     rt: OptimizeResult = root(objective_fun, y0)
 
-    eigvals, eigvecs = None, None
+    x, eigvals, eigvecs = None, None, None
     if rt.success:
         jac = poincare_map.image_detail(rt.x, params, period).jac
         if jac is not None:
@@ -103,16 +152,16 @@ def find_cycle(
             else:
                 eigvals = jac
 
-    x = rt.x
+        x = rt.x
 
-    if isinstance(y0, float) and (isinstance(x, numpy.ndarray) and x.size == 1):
-        x = float(x)
+        if isinstance(y0, float) and (isinstance(x, numpy.ndarray) and x.size == 1):
+            x = float(x)
 
-    if not is_type_of(x, type(y0)):
-        raise TypeError(type(x), type(y0))
+        if not is_type_of(x, type(y0)):
+            raise TypeError(type(x), type(y0))
 
-    if not is_type_of(eigvals, type(y0)) and eigvals is not None:
-        raise TypeError((type(eigvals), type(y0)))
+        if not is_type_of(eigvals, type(y0)) and eigvals is not None:
+            raise TypeError((type(eigvals), type(y0)))
 
     result = FindCycleResult[Y] (
         success=rt.success,
