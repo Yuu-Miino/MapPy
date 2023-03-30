@@ -891,9 +891,13 @@ def _exec_calculation (
 
     y0in = y0 if isinstance(y0, float) else y0.copy()
 
-    for i in range(map_count):
+    import time
+    for _ in range(map_count):
         while 1:
+            start = time.time()
             result = current_mode.step(y0in, params=params, calc_jac=calc_jac, calc_hes=calc_hes, rtol=rtol)
+            end = time.time()
+            print(end-start)
             if result.status == 0:
                 raise NextModeNotFoundError
 
