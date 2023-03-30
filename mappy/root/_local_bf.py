@@ -122,7 +122,7 @@ class ParameterKeyError(Exception):
     def __str__(self) -> str:
         return '`param_idx` and `cnt_idx` must be different value.'
 
-def trace_local_bf(
+def trace_local_bf (
     poincare_map: PoincareMap[Y],
     y0: Y,
     params: P,
@@ -133,16 +133,12 @@ def trace_local_bf(
     resolution: int = 100,
     period: int = 1,
     show_progress: bool = False
-) -> list[dict[str, numpy.ndarray | P]]:
+) -> list[tuple[tuple[Y, float], P]]:
     if bf_param_idx == cnt_param_idx:
         raise ParameterKeyError
 
-    def lamb (y, p: P):
-        if isinstance(y0, float):
-            y00 = float(y[0])
-        else:
-            y00 = numpy.array(y[0:poincare_map.dimension])
-        theta0 = float(y[poincare_map.dimension])
+    def lamb (y:tuple[Y, float], p: P):
+        y00, theta0 = y
         if not is_type_of(y00, type(y0)):
             raise TypeError(type(y00), type(y0))
         ret = find_local_bf(poincare_map, y00, p, bf_param_idx, theta0, period)
@@ -150,8 +146,7 @@ def trace_local_bf(
         if ret.success:
             if ret.y is None or ret.theta is None:
                 raise TypeError(ret.y, ret.theta)
-            y1 = numpy.array(ret.y)
-            y1 = numpy.append(y1, ret.theta)
+            y1 = (ret.y, ret.theta)
         p1 = ret.params
         if not is_type_of(p1, type(p)):
             raise TypeError
@@ -159,7 +154,7 @@ def trace_local_bf(
 
     return continuation(
         lamb,
-        numpy.array([y0, theta]),
+        (y0, theta),
         params,
         end_val,
         param_idx=cnt_param_idx,

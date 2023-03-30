@@ -4,8 +4,9 @@ from collections.abc import Callable
 from typing import TypeVar, TypeAlias, Any
 import numpy
 from ._type import is_type_of
+from ..fundamentals._core import BasicResult
 
-Y = TypeVar('Y', numpy.ndarray, float)
+Y = TypeVar('Y', numpy.ndarray, float, tuple)
 P: TypeAlias = dict[str, Any]
 
 def continuation(
@@ -16,7 +17,7 @@ def continuation(
     param_idx: str,
     resolution: int = 100,
     show_progress: bool = False,
-) -> list[dict[str, Y | P]]:
+) -> list[tuple[Y, P]]:
     """Parameter continuation
 
     Parameters
@@ -42,10 +43,10 @@ def continuation(
 
     h = (end_val-params[param_idx])/(resolution-1)
 
-    y = y0 if isinstance(y0, float) else y0.copy()
+    y = y0.copy() if isinstance(y0, numpy.ndarray) else y0
     p = params.copy()
 
-    found: list[dict[str, Y | P]] = []
+    found: list[tuple[Y, P]] = []
 
     for i in range(resolution):
         ret = fun(y, p)
@@ -62,9 +63,6 @@ def continuation(
         if y is None or p is None:
             break
 
-        if not isinstance(y, numpy.ndarray) or y.size == 1:
-            y = float(y)
-
         if not is_type_of(y, type(y0)):
             raise TypeError(type(y), type(y0))
         if not is_type_of(p, type(params)):
@@ -72,7 +70,7 @@ def continuation(
 
         if show_progress:
             precision = 10
-            show_str: list[str] = ["\tSUCCESS" if ret.success else "FAILURE", f"{i+1:04d}"]
+            show_str: list[str] = ["\tSUCCESS" if ret.success else "FAILURE", f"{i+1:0{len(str(resolution))}d}"]
             for val in [y, list(p.values())]:
                 if isinstance(val, float) or len(val) == 1:
                     show_str.append(f"{val:+.{precision}f}")
@@ -80,17 +78,14 @@ def continuation(
                     show_str.append(" ".join(["{:+."+str(precision)+"f}"] * len(val)).format(*val))
             print(" ".join(show_str), end="\r")
 
-        found.append({
-            'y': y,
-            'params': p
-        })
+        found.append((y, p))
 
         if i != resolution-1:
             p[param_idx] += h
     if show_progress: print()
     return found
 
-class ContinuationFunResult:
+class ContinuationFunResult(BasicResult):
     def __init__(self,
         success: bool, y: Y | None, p: P | None,
     ) -> None:
