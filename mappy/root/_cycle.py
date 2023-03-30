@@ -1,13 +1,13 @@
 """Cycle (periodic point)
 """
-from typing import TypeVar, Generic
-from mappy import PoincareMap
+from typing import TypeVar, Generic, TypeAlias, Any
+from mappy import PoincareMap, BasicResult
 import numpy
 from scipy.optimize import root, OptimizeResult
 from ..tools import is_type_of, ContinuationFunResult, continuation
 
 Y = TypeVar('Y', numpy.ndarray, float)
-P = TypeVar('P', numpy.ndarray, float)
+P: TypeAlias = dict[str, Any]
 
 def _cond_cycle(
     pmap: PoincareMap,
@@ -18,7 +18,7 @@ def _cond_cycle(
     y1 = pmap.image(y0, params, period)
     return y1-y0
 
-class FindCycleResult (Generic[Y]):
+class FindCycleResult (BasicResult, Generic[Y]):
     """Result of finding a periodic cycle
 
     Parameters
@@ -51,8 +51,6 @@ class FindCycleResult (Generic[Y]):
         self.eigvecs = eigvecs
         self.itr = itr
         self.err = err
-    def __repr__(self) -> str:
-        return str({key: val for key, val in self.__dict__.items() if not key.startswith("__")})
 
 def find_cycle(
     poincare_map: PoincareMap,
@@ -127,15 +125,15 @@ def find_cycle(
     )
 
 def trace_cycle(
-    poincare_map: PoincareMap,
+    poincare_map: PoincareMap[Y],
     y0: Y,
     params: P,
-    cnt_param_idx: int,
+    cnt_param_idx: str,
     end_val: float,
     resolution: int = 100,
     period: int = 1,
     show_progress: bool = False
-) -> list[dict[str, Y | P ]]:
+) -> list[tuple[Y, P]]:
     def lamb (y: Y, p: P):
         ret = find_cycle(poincare_map, y, p, period)
         return ContinuationFunResult(ret.success, ret.y, p)

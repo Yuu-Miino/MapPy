@@ -1,18 +1,19 @@
 """Fundamental classes and functions
 """
-from typing import Any, Generic, TypeVar, ClassVar
+from typing import Any, Generic, TypeVar, ClassVar, TypeAlias
 from collections.abc import Callable
 from functools import wraps
 import numpy
 from scipy.integrate import solve_ivp, OdeSolution
 numpy.set_printoptions(precision=12)
 import sympy
+from ._core import BasicResult
 from ..tools import is_type_of
 
-Y = TypeVar('Y', numpy.ndarray, float)
+Y  = TypeVar('Y', numpy.ndarray, float)
 YF = TypeVar('YF', numpy.ndarray, float)
 YB = TypeVar('YB', bound=float)
-P = TypeVar('P', numpy.ndarray, float)
+P: TypeAlias = dict[str, Any]
 
 class TransitionKeyError (Exception):
     """Exception for the undefined transition
@@ -35,7 +36,7 @@ class NextModeNotFoundError (Exception):
     def __str__(self) -> str:
         return (f'[Next mode] Not found next mode. The ODE solver finished with status `0`.')
 
-class ModeStepResult(Generic[Y]):
+class ModeStepResult(BasicResult, Generic[Y]):
     """Result of `step` in `Mode`
 
     The ModeStepResult class provides the result of `step` in the mode.
@@ -76,10 +77,7 @@ class ModeStepResult(Generic[Y]):
         self.sol = sol
         self.tend = tend
 
-    def __repr__(self) -> str:
-        return str(self.__dict__)
-
-class Mode(Generic[Y, P, YF]):
+class Mode(Generic[Y, YF]):
     """Parent Class of all modes
 
     Parent Class of all modes
@@ -97,7 +95,7 @@ class Mode(Generic[Y, P, YF]):
         Count of the common system parameters.
 
     """
-    parameters: ClassVar[int]
+    param_keys: ClassVar[list[str]]
 
     def __init__(self,
         name: str,
@@ -108,10 +106,11 @@ class Mode(Generic[Y, P, YF]):
 
         # Jacobian for fun by SymPy
         x_symb = sympy.symbols(' '.join([f'x_{i}' for i in range(self.fun.dom_dim)]))
-        if Mode.parameters > 0:
-            p_symb = sympy.symbols(' '.join([f'p_{i}' for i in range(Mode.parameters)]))
-        else:
-            p_symb = None
+        p_symb: P | None = None
+        p_symb_list: list[sympy.Symbol] | None = None
+        if len(self.param_keys) > 0:
+            p_symb = {k: sympy.Symbol(k) for k in self.param_keys}
+            p_symb_list = list(p_symb.values())
         if hasattr(self.fun, 'cod_dim') and self.fun.cod_dim == 1:
             f = sympy.Matrix([fun(x_symb, p_symb)])
         else:
@@ -124,9 +123,12 @@ class Mode(Generic[Y, P, YF]):
                 jac = sympy.derive_by_array(f, x_symb)
             else:
                 jac = f.jacobian(x_symb)
-        jac_fun = sympy.lambdify((x_symb, p_symb), jac, 'numpy')
+        if p_symb is None:
+            jac_fun = sympy.lambdify([x_symb], jac, 'numpy')
+        else:
+            jac_fun = sympy.lambdify((x_symb, p_symb_list), jac, 'numpy')
         if jac_fun is None:
-            raise Exception('lambdify returns None')
+            raise Exception('[JAC_FUN] lambdify returns None')
         self.jac_fun = jac_fun
 
         # Hessian for fun by SymPy
@@ -134,7 +136,12 @@ class Mode(Generic[Y, P, YF]):
             hess = sympy.diff(jac, x_symb)
         else:
             hess = sympy.derive_by_array(jac, x_symb)
-        hes_fun = sympy.lambdify((x_symb, p_symb), hess, 'numpy')
+        if p_symb is None:
+            hes_fun = sympy.lambdify([x_symb], hess, 'numpy')
+        else:
+            hes_fun = sympy.lambdify((x_symb, p_symb_list), hess, 'numpy')
+        if hes_fun is None:
+            raise Exception('[HES_FUN] lambdify returns None')
         self.hes_fun = hes_fun
 
     def __hash__(self): return hash(id(self))
@@ -166,7 +173,7 @@ class Mode(Generic[Y, P, YF]):
 
         return NotImplemented
 
-class ContinuousMode (Mode[Y, P, YF]):
+class ContinuousMode (Mode[Y, YF]):
     """Mode for the continuos-time dynamical system
 
     Mode for the continuos-time dynamical system
@@ -188,7 +195,7 @@ class ContinuousMode (Mode[Y, P, YF]):
     def __init__(self,
         name: str,
         fun: Callable[[Y, P | None], YF],
-        borders: list[Callable[[Y, P], float]],
+        borders: list[Callable[[Y, P | None], float]],
         max_interval: float = float(20),
     ) -> None:
         super().__init__(name, fun)
@@ -197,7 +204,11 @@ class ContinuousMode (Mode[Y, P, YF]):
 
         # Jacobian for borders by SymPy
         x_symb = sympy.symbols(' '.join([f'x_{i}' for i in range(self.fun.dom_dim)]))
-        p_symb = sympy.symbols(' '.join([f'p_{i}' for i in range(Mode.parameters)]))
+        p_symb: P | None = None
+        p_symb_list: list[sympy.Symbol] | None = None
+        if len(self.param_keys) > 0:
+            p_symb = {k: sympy.Symbol(k) for k in self.param_keys}
+            p_symb_list = list(p_symb.values())
 
         self.jac_borders = []
         self.hes_borders = []
@@ -208,7 +219,12 @@ class ContinuousMode (Mode[Y, P, YF]):
                 jac = sympy.diff(f, x_symb)
             else:
                 jac = sympy.derive_by_array(f, x_symb)
-            jac_fun = sympy.lambdify((x_symb, p_symb), jac, 'numpy')
+            if p_symb is None:
+                jac_fun = sympy.lambdify([x_symb], jac, 'numpy')
+            else:
+                jac_fun = sympy.lambdify((x_symb, p_symb_list), jac, 'numpy')
+            if jac_fun is None:
+                raise Exception('[JAC_BORDERS] lambdify returns None')
             self.jac_borders.append(jac_fun)
 
             # Hessian
@@ -216,18 +232,27 @@ class ContinuousMode (Mode[Y, P, YF]):
                 hess = sympy.diff(jac, x_symb)
             else:
                 hess = sympy.derive_by_array(jac, x_symb)
-            hes_fun = sympy.lambdify((x_symb, p_symb), hess, 'numpy')
+            if p_symb is None:
+                hes_fun = sympy.lambdify([x_symb], hess, 'numpy')
+            else:
+                hes_fun = sympy.lambdify((x_symb, p_symb_list), hess, 'numpy')
+            if hes_fun is None:
+                raise Exception('[HES_BORDERS] lambdify returns None')
             self.hes_borders.append(hes_fun)
 
     def __ode_jac (self,
             y: numpy.ndarray,
-            params: P | None = None
+            params: P | None = None,
+            params_arr: numpy.ndarray | None = None,
         ) -> numpy.ndarray:
         dim = self.fun.dom_dim
         dydy0 = y[dim:dim+(dim**2)].reshape((dim, dim), order='F')
 
-        ode = lambda y: self.fun(y, params)
-        ode_jac = lambda y: self.jac_fun(y, params)
+        ode     = lambda y: self.fun(y, params)
+        if params_arr is None:
+            ode_jac = self.jac_fun
+        else:
+            ode_jac = lambda y: self.jac_fun(y, params_arr)
 
         deriv = numpy.empty(dim+(dim**2))
         deriv[0:dim] = ode(y[0:dim])
@@ -238,7 +263,8 @@ class ContinuousMode (Mode[Y, P, YF]):
 
     def __ode_hes (self,
             y: numpy.ndarray,
-            params: P | None = None
+            params: P | None = None,
+            params_arr: numpy.ndarray | None = None,
         ) -> numpy.ndarray:
         dim = self.fun.dom_dim
 
@@ -250,8 +276,12 @@ class ContinuousMode (Mode[Y, P, YF]):
         d2ydy02 = d2ydy02.transpose(0, 2, 1)
 
         ode = lambda y: self.fun(y, params)
-        ode_jac = lambda y: self.jac_fun(y, params)
-        ode_hes = lambda y: self.hes_fun(y, params)
+        if params_arr is None:
+            ode_jac = self.jac_fun
+            ode_hes = self.hes_fun
+        else:
+            ode_jac = lambda y: self.jac_fun(y, params_arr)
+            ode_hes = lambda y: self.hes_fun(y, params_arr)
 
         deriv = numpy.empty(dim+(dim**2)+(dim**2*(dim+1)//2))
         # ODE
@@ -353,30 +383,41 @@ class ContinuousMode (Mode[Y, P, YF]):
         ode_fun = lambda t, y : self.fun(y, params)
         calc_jac = calc_hes or calc_jac
 
-        if calc_jac:
-            jac_fun = lambda t, y: self.jac_fun(y, params)
-            if calc_hes:
-                ode = lambda t, y: self.__ode_hes(y, params)
-            else:
-                ode = lambda t, y: self.__ode_jac(y, params)
-        else:
-            jac_fun = None
-            ode = lambda t, y: self.fun(y, params)
-
         borders = []
         for ev in self.borders:
             evi = lambda t, y, ev=ev: ev(y, params)
             evi.terminal  = True
             evi.direction = ev.direction
             borders.append(evi)
-        devs = []
-        for dev in self.jac_borders:
-            devi = lambda t, y, dev=dev: dev(y, params)
-            devs.append(devi)
-        d2evs = []
-        for dev in self.hes_borders:
-            d2evi = lambda t, y, dev=dev: dev(y, params)
-            d2evs.append(d2evi)
+
+        if calc_jac:
+            params_arr = None if params is None else numpy.array([params[k] for k in self.param_keys])
+            jac_fun = lambda t, y: self.jac_fun(y, params_arr)
+            if calc_hes:
+                ode = lambda t, y: self.__ode_hes(y, params, params_arr)
+            else:
+                ode = lambda t, y: self.__ode_jac(y, params, params_arr)
+
+            # Border derivatives
+            devs = []
+            for dev in self.jac_borders:
+                if params is None:
+                    devi = lambda t, y, dev=dev: dev(y)
+                else:
+                    devi = lambda t, y, dev=dev: dev(y, params_arr)
+                devs.append(devi)
+            d2evs = []
+            for dev in self.hes_borders:
+                if params is None:
+                    d2evi = lambda t, y, dev=dev: dev(y)
+                else:
+                    d2evi = lambda t, y, dev=dev: dev(y, params_arr)
+                d2evs.append(d2evi)
+        else:
+            jac_fun = None
+            ode     = lambda t, y: self.fun(y, params)
+            devs    = None
+            d2evs   = None
 
         i_border: int | None = None
         dim = self.fun.dom_dim
@@ -421,7 +462,7 @@ class ContinuousMode (Mode[Y, P, YF]):
             # For each borders
             for i, ev in enumerate(self.borders):
                 if len(sol.t_events[i]) != 0:
-                    if jact is not None and jac_fun is not None:
+                    if jact is not None and jac_fun is not None and devs is not None and d2evs is not None:
                         dydt = numpy.array(ode_fun(0, y1))
                         dbdy = numpy.array(devs[i](0, y1))
                         dot: numpy.float64 = numpy.dot(dbdy, dydt)
@@ -449,7 +490,7 @@ class ContinuousMode (Mode[Y, P, YF]):
 
         return result
 
-class DiscreteMode (Mode[Y, P, YF]):
+class DiscreteMode (Mode[Y, YF]):
     """Mode of the discrete-time dynamical system
 
     Mode of the discrete-time dynamical system
@@ -535,16 +576,17 @@ class DiscreteMode (Mode[Y, P, YF]):
 
         # Convert functions into the general form
         if calc_jac:
+            params_arr = None if params is None else numpy.array([params[k] for k in self.param_keys])
             if calc_hes:
                 mapT = lambda n, y: numpy.hstack((
                     self.fun(y, params),
-                    numpy.array(self.jac_fun(y, params)).flatten(order='F'),
-                    numpy.array(self.hes_fun(y, params)).flatten(order='F')
+                    numpy.array(self.jac_fun(y, params_arr)).flatten(order='F'),
+                    numpy.array(self.hes_fun(y, params_arr)).flatten(order='F')
                 ))
             else:
                 mapT = lambda n, y: numpy.append(
                     self.fun(y, params),
-                    numpy.array(self.jac_fun(y, params)).flatten(order='F')
+                    numpy.array(self.jac_fun(y, params_arr)).flatten(order='F')
                 )
         else:
             mapT = lambda n, y: numpy.array(self.fun(y, params))
@@ -582,7 +624,7 @@ class DiscreteMode (Mode[Y, P, YF]):
 
         return result
 
-class SolveIvbmpResult(Generic[Y]):
+class SolveIvbmpResult(BasicResult, Generic[Y]):
     """Result of `solve_ivbmp`
 
     Result of `solve_ivbmp`
@@ -616,8 +658,6 @@ class SolveIvbmpResult(Generic[Y]):
         self.hes = hes
         self.eigvals = eigvals
         self.eigvecs = eigvecs
-    def __repr__(self) -> str:
-        return str(self.__dict__)
 
 class SomeJacUndefined(Exception):
     """Exception that some of mode dose not enable Jacobian matrix calculation.
@@ -664,7 +704,7 @@ def solve_ivbmp(
         Flag to calculate the Jacobian matrix, by default `True`.
     calc_hes : bool, optional
         Flag to calculate the Hessian tensor, by default `True`.
-    params : Any, optional
+    params : Parameter, optional
         Parameter to pass to `fun` in all `mode`, by default None.
     rtol : float, optional
         Relative torelance to pass to `solve_ivp`, by default `1e-6`.
@@ -692,7 +732,7 @@ def solve_ivbmp(
         return SolveIvbmpResult[float](
             y0in, trans_history, jac, eigs, eigv, hes)
 
-class PoincareMap(Generic[Y, P]):
+class PoincareMap(Generic[Y]):
     """Construct Poincare map
 
     Construct Poincare map
@@ -814,7 +854,7 @@ def solve_poincare_map(
         Flag to calculate the Jacobian matrix, by default `True`.
     calc_hes : bool, optional
         Flag to calculate the Hessian tensor, by default `True`.
-    params : Any, optional
+    params : Parameter, optional
         Parameter to pass to `fun` in all `mode`, by default None.
     rtol : float, optional
         Relative torelance to pass to `solve_ivp`, by default `1e-6`.
