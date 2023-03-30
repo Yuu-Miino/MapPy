@@ -296,17 +296,55 @@ class ContinuousMode (Mode[Y, YF]):
     def function(cls, dimension: int, param_keys: list[str] = []) -> Callable:
         """Decorator for ``fun`` in ``ContinuousTimeMode``
 
-        The method provides the decorator for ``fun`` in ``ContinuousTimeMode``
+        The method provides the decorator for ``fun`` in ``ContinuousTimeMode``.
 
         Parameters
         ----------
         dimension : int
-            Dimension of the state space.
+            Dimension of the state space of the system.
+        param_keys : list[str]
+            List of keys for the parameters used in ``fun``, by default ``[]``.
 
         Returns
         -------
         Callable
-            Decorated ``fun`` function compatible with ``ContinousTimeMode``
+            Decorated ``fun`` function compatible with ``fun`` in ``ContinousTimeMode``
+
+        See also
+        --------
+        mappy.ContinuousMode
+
+        Examples
+        --------
+        The Izhikevich neuron model includes a system of ODEs
+        defined in the 2-dimensional state space :math:`\\R^2`.
+
+        .. math::
+
+            \\deriv{v}{t} &= 0.04 v^2 + 5 v + 140 - u + I, \\\\
+            \\deriv{u}{t} &= a(bv-u)
+
+        The equivalent description for the system by ``mappy`` is as follows.
+
+        .. code-block:: python
+
+            from mappy import ContinuousMode as CM
+
+            @CM.function(dimension = 2, param_keys = ['a', 'b', 'I'])
+            def izhikevich (y, param):
+                v, u = y
+                a = param['a']
+                b = param['b']
+                I = param['I']
+
+                return np.array([
+                    0.04 * (v ** 2) + 5.0 * v + 140.0 - u + I,
+                    a * (b * v - u)
+                ])
+
+            # `izhikevich` is compatible with ContinuousMode class
+            mode1 = CM(name = 'mode1', fun = izhikevich)
+
         """
         def _decorator(fun: Callable[[Y, P], YF]) -> Callable[[Y, P], YF]:
             @wraps(fun)
@@ -345,9 +383,9 @@ class ContinuousMode (Mode[Y, YF]):
 
         .. code-block:: python
 
-            from mappy.ContinuousMode import border
+            from mappy import ContinuousMode as CM
 
-            @border(direction = 1)
+            @CM.border(direction = 1)
             def my_border1 (y, p):
                 return y[0] + p['a']
 
@@ -355,10 +393,10 @@ class ContinuousMode (Mode[Y, YF]):
 
         .. code-block:: python
 
-            from mappy.ContinuousMode import border
+            from mappy import ContinuousMode as CM
             from numpy import ndarray
 
-            @border(direction = 1)
+            @CM.border(direction = 1)
             def my_border1 (y: ndarray, p: dict[str, float] | None = None):
                 if p is None:
                     raise TypeError('Parameter should not be None')
@@ -408,15 +446,15 @@ class ContinuousMode (Mode[Y, YF]):
         ----------
         y0 : numpy.ndarray or float
             The initial state y0 of the system evolution.
-        params : Any, optional
-            Parameters to pass to ``fun`` and ``borders``, by default None.
+        params : dict[str, Any], optional
+            Parameters to pass to ``fun`` and ``borders``, by default ``None``.
         calc_jac : Boolean, optional
             Flag to calculate the Jacobian matrix of the map from initial value to the result y, by default ``True``.
         calc_hes : Boolean, optional
             Flag to calculate the Hessian matrix of the map from initial value to the result y, by default ``True``.
             If ``True``, calc_jac is automatically set to ``True``.
         **options
-            The options of ``solve_ivp``.
+            The options of ``solve_ivp`` in ``scipy.integrate``.
 
         Returns
         -------
@@ -435,7 +473,7 @@ class ContinuousMode (Mode[Y, YF]):
             borders.append(evi)
 
         if calc_jac:
-            params_arr = None if params is None else numpy.array([params[k] for k in self.fun.param_keys])
+            params_arr = None if params is None or len(self.fun.param_keys) == 0 else numpy.array([params[k] for k in self.fun.param_keys])
             jac_fun = lambda t, y: self.jac_fun(y, params_arr)
             if calc_hes:
                 ode = lambda t, y: self.__ode_hes(y, params, params_arr)

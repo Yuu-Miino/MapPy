@@ -1,5 +1,5 @@
 import numpy as np
-from mappy import ContinuousMode as CM, DiscreteMode as DM, PoincareMap, Mode
+from mappy import ContinuousMode as CM, DiscreteMode as DM, PoincareMap
 from mappy.root import *
 
 ## Izhikevich neuron model
