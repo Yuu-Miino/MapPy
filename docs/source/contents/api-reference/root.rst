@@ -16,7 +16,6 @@ Find cycles
 
     find_cycle
     trace_cycle
-    FindCycleResult
 
 Find Local Bifurcation Set
 --------------------------
@@ -26,5 +25,20 @@ Find Local Bifurcation Set
 
     find_local_bf
     trace_local_bf
+
+Result Classes
+--------------
+
+.. autosummary::
+    :toctree: generated/
+
+    FindCycleResult
     FindLocalBfResult
+
+Exceptions
+----------
+
+.. autosummary::
+    :toctree: generated/
+
     ParameterKeyError

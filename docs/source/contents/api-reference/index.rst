@@ -9,4 +9,5 @@ API Reference
 
     fundamentals
     root
+    continuation
     tools

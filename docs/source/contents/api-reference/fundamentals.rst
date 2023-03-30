@@ -17,7 +17,6 @@ Mode
     Mode
     ContinuousMode
     DiscreteMode
-    ModeStepResult
 
 Initial Value Boundary Mode Problem
 -----------------------------------
@@ -26,8 +25,18 @@ Initial Value Boundary Mode Problem
     :toctree: generated/
 
     solve_ivbmp
-    SolveIvbmpResult
+    solve_poincare_map
     PoincareMap
+
+Result Classes
+--------------
+
+.. autosummary::
+    :toctree: generated/
+
+    BasicResult
+    ModeStepResult
+    SolveIvbmpResult
 
 Exceptions
 ----------
@@ -39,3 +48,4 @@ Exceptions
     SomeHesUndefined
     TransitionKeyError
     AllModesKeyError
+    NextModeNotFoundError

@@ -19,10 +19,13 @@ help:
 %: Makefile
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
+.PHONY: clean
+clean:
+	@rm -rf $(SOURCEDIR)/contents/api-reference/generated
+	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
 .PHONY: html
 html: # sphinx-apidoc # ds_mode
 	$(SPHINXBUILD) "$(SOURCEDIR)" "$(BUILDDIR)/html"
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
-
-USER_GUIDE = "$(SOURCEDIR)"/contents/user_guide/

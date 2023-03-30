@@ -78,7 +78,8 @@ mathjax3_config = {
             'braces': [r"\left\{#1\right\}", 1],
             'brackets': [r"\left[#1\rigth]", 1],
             'set': [r"\braces{#1}", 1],
-            'case': [r"\left{#1\right.", 1]
+            'case': [r"\left{#1\right.", 1],
+            'R': [r"\mathbb{R}"]
         }
     }
 }

@@ -1,6 +1,6 @@
 """Fundamental classes and functions
 """
-from typing import Any, Generic, TypeVar, ClassVar, TypeAlias
+from typing import Generic
 from collections.abc import Callable
 from functools import wraps
 import numpy
@@ -8,12 +8,7 @@ from scipy.integrate import solve_ivp, OdeSolution
 numpy.set_printoptions(precision=12)
 import sympy
 from ._core import BasicResult
-from ..tools import is_type_of
-
-Y  = TypeVar('Y', numpy.ndarray, float)
-YF = TypeVar('YF', numpy.ndarray, float)
-YB = TypeVar('YB', bound=float)
-P: TypeAlias = dict[str, Any]
+from ..typing import is_type_of, Y, YF, YB, P
 
 class TransitionKeyError (Exception):
     """Exception for the undefined transition
@@ -34,30 +29,30 @@ class NextModeNotFoundError (Exception):
     """Exception that the next mode is not found
     """
     def __str__(self) -> str:
-        return (f'[Next mode] Not found next mode. The ODE solver finished with status `0`.')
+        return (f'[Next mode] Not found next mode. The ODE solver finished with status ``0``.')
 
 class ModeStepResult(BasicResult, Generic[Y]):
-    """Result of `step` in `Mode`
+    """Result of ``step`` in ``Mode``
 
-    The ModeStepResult class provides the result of `step` in the mode.
+    The ModeStepResult class provides the result of ``step`` in the mode.
 
     Parameters
     ----------
     status : int
-        Response status of `solve_ivp` for the continuous mode.
-        `1` for the discrete mode.
+        Response status of ``solve_ivp`` for the continuous mode.
+        ``1`` for the discrete mode.
     y : numpy.ndarray or float
         Value of the solution after step.
     tend : float or None, optional
-        Value of the time after step of the continuous-time mode, by default `None`.
+        Value of the time after step of the continuous-time mode, by default ``None``.
     i_border : int or None, optional
-        Index of the border where the trajectory arrives, by default `None`.
+        Index of the border where the trajectory arrives, by default ``None``.
     jac : numpy.ndarray, float, or None, optional
-        Value of the Jacobian matrix, by default `None`.
+        Value of the Jacobian matrix, by default ``None``.
     hes : numpy.ndarray, float, or None, optional
-        Value of the Hessian tensor, by default `None`.
+        Value of the Hessian tensor, by default ``None``.
     sol : OdeSolution or None, optional
-        OdeSolution instance of `solve_ivp` in the continuous-time mode, by default `None`.
+        OdeSolution instance of ``solve_ivp`` in the continuous-time mode, by default ``None``.
 
     """
     def __init__(self,
@@ -78,9 +73,9 @@ class ModeStepResult(BasicResult, Generic[Y]):
         self.tend = tend
 
 class Mode(Generic[Y, YF]):
-    """Parent Class of all modes
+    """Base Class of all modes
 
-    Parent Class of all modes
+    The originator class of continuous and discrete modes.
 
     Parameters
     ----------
@@ -89,13 +84,7 @@ class Mode(Generic[Y, YF]):
     fun : Callable
         Evolutional function in the mode.
 
-    Attributes
-    ----------
-    parameters : int
-        Count of the common system parameters.
-
     """
-    param_keys: ClassVar[list[str]]
 
     def __init__(self,
         name: str,
@@ -108,8 +97,8 @@ class Mode(Generic[Y, YF]):
         x_symb = sympy.symbols(' '.join([f'x_{i}' for i in range(self.fun.dom_dim)]))
         p_symb: P | None = None
         p_symb_list: list[sympy.Symbol] | None = None
-        if len(self.param_keys) > 0:
-            p_symb = {k: sympy.Symbol(k) for k in self.param_keys}
+        if len(self.fun.param_keys) > 0:
+            p_symb = {k: sympy.Symbol(k) for k in self.fun.param_keys}
             p_symb_list = list(p_symb.values())
         if hasattr(self.fun, 'cod_dim') and self.fun.cod_dim == 1:
             f = sympy.Matrix([fun(x_symb, p_symb)])
@@ -155,20 +144,22 @@ class Mode(Generic[Y, YF]):
     ) -> ModeStepResult[YF]:
         """Step to the next mode
 
-        Step to the next mode
+        The method to operate the step of the ``mode``.
+        The definition depends on the practical type of ``mode``,
+        continuous or discrete.
 
         Parameters
         ----------
         y0 : numpy.ndarray
-            The initial state to pass to `fun`.
+            The initial state to pass to ``fun``.
         params : Any or None, optional
-            The parameter to pass to `fun`, by default None.
+            The parameter to pass to ``fun``, by default None.
         **options
             For future implementation.
 
         Returns
         -------
-        ModeStepResult
+        NotImplementented
         """
 
         return NotImplemented
@@ -176,19 +167,22 @@ class Mode(Generic[Y, YF]):
 class ContinuousMode (Mode[Y, YF]):
     """Mode for the continuos-time dynamical system
 
-    Mode for the continuos-time dynamical system
+    The class to define the mode for continuos-time dynamical systems.
 
     Parameters
     ----------
     name : str
         Name of the mode.
     fun : Callable
-        Right-hand side of the continuous-time dynamical system. The calling signature is fun(y).
-    borders: list of callables
-        List of the border functions to pass to `solve_ivp` as events. The calling signature is border(y).
-    max_interval: float, optional
-        Max interval of the time span, by default `20`.
-        The function `solve_ivp` of SciPy takes `t_span = [0, max_interval]`.
+        Right-hand side of the continuous-time dynamical system. The calling signature is ``fun(y, p | None)``,
+        where ``y`` is the state variable and ``p`` is a parameter dictionary.
+    borders : list of callables
+        List of the border functions to pass to ``solve_ivp`` as events.
+        All border functions should be decorated by ``border`` method of the class.
+        The calling signature is ``border(y, p | None)``.
+    max_interval : float, optional
+        Max interval of the time span, by default ``20``.
+        The function ``solve_ivp`` of SciPy takes ``t_span = [0, max_interval]``.
 
     """
 
@@ -206,8 +200,8 @@ class ContinuousMode (Mode[Y, YF]):
         x_symb = sympy.symbols(' '.join([f'x_{i}' for i in range(self.fun.dom_dim)]))
         p_symb: P | None = None
         p_symb_list: list[sympy.Symbol] | None = None
-        if len(self.param_keys) > 0:
-            p_symb = {k: sympy.Symbol(k) for k in self.param_keys}
+        if len(self.fun.param_keys) > 0:
+            p_symb = {k: sympy.Symbol(k) for k in self.fun.param_keys}
             p_symb_list = list(p_symb.values())
 
         self.jac_borders = []
@@ -299,10 +293,10 @@ class ContinuousMode (Mode[Y, YF]):
         return deriv
 
     @classmethod
-    def function(cls, dimension: int) -> Callable:
-        """Decorator for `fun` in `ContinuousTimeMode`
+    def function(cls, dimension: int, param_keys: list[str] = []) -> Callable:
+        """Decorator for ``fun`` in ``ContinuousTimeMode``
 
-        Decorator for `fun` in `ContinuousTimeMode`
+        The method provides the decorator for ``fun`` in ``ContinuousTimeMode``
 
         Parameters
         ----------
@@ -312,7 +306,7 @@ class ContinuousMode (Mode[Y, YF]):
         Returns
         -------
         Callable
-            Decorated `fun` function compatible with `ContinousTimeMode`
+            Decorated ``fun`` function compatible with ``ContinousTimeMode``
         """
         def _decorator(fun: Callable[[Y, P], YF]) -> Callable[[Y, P], YF]:
             @wraps(fun)
@@ -320,29 +314,79 @@ class ContinuousMode (Mode[Y, YF]):
                 ret = fun(y, p)
                 return ret
             setattr(_wrapper, 'dom_dim', dimension)
+            setattr(_wrapper, 'param_keys', param_keys)
             return _wrapper
         return _decorator
 
     @classmethod
     def border(cls, direction: int = 1) -> Callable:
-        """Decorator for the element of `borders` in `ContinuousTimeMode`
+        """Decorator for the element of ``borders`` in ``ContinuousTimeMode``
 
-        Decorator for the element of `borders` in `ContinuousTimeMode`
+        The method providing the decorator for a element of ``borders`` in ``ContinuousTimeMode``.
+        The calling signature is ``border(y, p | None)`` and it should be the same one as ``fun``.
 
         Parameters
         ----------
         direction : int, optional
-            Direction of a zero crossing, by default `1`.
-            The value is directly passed to the `direction` attribute of the `event` function, which is the argument of `solve_ivp`.
+            Direction of a zero crossing, by default ``1``.
+            The value is directly passed to the ``direction`` attribute of the
+            ``event`` function, which is the argument of ``solve_ivp``.
 
         Returns
         -------
         Callable
-            Decorated `border` function compatible with `ContinuousTimeMode`
+            Decorated ``border`` function compatible with ``ContinuousTimeMode``
+
+        Examples
+        --------
+        Assume :math:`a \\in \\R` be a parameter for the border function and
+        :math:`\\bm x=(x, y)` is a state vector.
+        One can implement the border defined by :math:`y+a=0` as follows.
+
+        .. code-block:: python
+
+            from mappy.ContinuousMode import border
+
+            @border(direction = 1)
+            def my_border1 (y, p):
+                return y[0] + p['a']
+
+        The following example with strict type hints is the same as above one.
+
+        .. code-block:: python
+
+            from mappy.ContinuousMode import border
+            from numpy import ndarray
+
+            @border(direction = 1)
+            def my_border1 (y: ndarray, p: dict[str, float] | None = None):
+                if p is None:
+                    raise TypeError('Parameter should not be None')
+                return y[0] + p['a']
+
+        Another example below implements the border defined by :math:`y - 10 = 0`,
+        which does not require any parameters.
+
+        .. code-block:: python
+
+            @border(direction=1)
+            def my_border_fun (y: float, _):
+                return y - 10
+
+        .. warning::
+
+            In the last example, ``my_border_fun`` does not use parameter.
+            However it should implement the argument place to input parameter
+            due to the package limitation.
+            In such a case, the throwaway variable ``_`` is useful.
+
+        See also
+        --------
+        mappy.ContinuousMode
         """
-        def _decorator(fun: Callable[[Y, P], YB]) -> Callable[[Y, P], YB]:
+        def _decorator(fun: Callable[[Y, P | None], YB]) -> Callable[[Y, P | None], YB]:
             @wraps(fun)
-            def _wrapper(y: Y, p: P) -> YB:
+            def _wrapper(y: Y, p: P | None) -> YB:
                 ret = fun(y, p)
                 return ret
             setattr(_wrapper, 'direction', direction)
@@ -365,14 +409,14 @@ class ContinuousMode (Mode[Y, YF]):
         y0 : numpy.ndarray or float
             The initial state y0 of the system evolution.
         params : Any, optional
-            Parameters to pass to `fun` and `borders`, by default None.
+            Parameters to pass to ``fun`` and ``borders``, by default None.
         calc_jac : Boolean, optional
-            Flag to calculate the Jacobian matrix of the map from initial value to the result y, by default `True`.
+            Flag to calculate the Jacobian matrix of the map from initial value to the result y, by default ``True``.
         calc_hes : Boolean, optional
-            Flag to calculate the Hessian matrix of the map from initial value to the result y, by default `True`.
-            If True, calc_jac is automatically set to `True`.
+            Flag to calculate the Hessian matrix of the map from initial value to the result y, by default ``True``.
+            If ``True``, calc_jac is automatically set to ``True``.
         **options
-            The options of `solve_ivp`.
+            The options of ``solve_ivp``.
 
         Returns
         -------
@@ -391,7 +435,7 @@ class ContinuousMode (Mode[Y, YF]):
             borders.append(evi)
 
         if calc_jac:
-            params_arr = None if params is None else numpy.array([params[k] for k in self.param_keys])
+            params_arr = None if params is None else numpy.array([params[k] for k in self.fun.param_keys])
             jac_fun = lambda t, y: self.jac_fun(y, params_arr)
             if calc_hes:
                 ode = lambda t, y: self.__ode_hes(y, params, params_arr)
@@ -510,22 +554,22 @@ class DiscreteMode (Mode[Y, YF]):
         super().__init__(name, fun)
 
     @classmethod
-    def function(cls, domain_dimension: int, codomain_dimension: int) -> Callable:
-        """Decorator for `fun` in `DiscreteTimeMode`
+    def function(cls, domain_dimension: int, codomain_dimension: int, param_keys: list[str] = []) -> Callable:
+        """Decorator for ``fun`` in ``DiscreteTimeMode``
 
-        Decorator for `fun` in `DiscreteTimeMode`
+        Decorator for ``fun`` in ``DiscreteTimeMode``
 
         Parameters
         ----------
         domain_dimension : int
-            Dimension of the domain of the function `fun`.
+            Dimension of the domain of the function ``fun``.
         codomain_dimension : int
-            Dimension of the codomain of the function `fun`.
+            Dimension of the codomain of the function ``fun``.
 
         Returns
         -------
         Callable
-            Decorated function compatible with `DiscreteTimeMode`
+            Decorated function compatible with ``DiscreteTimeMode``
         """
         def _decorator(fun: Callable[[Y, P], YF]) -> Callable[[Y, P], YF]:
             @wraps(fun)
@@ -534,6 +578,7 @@ class DiscreteMode (Mode[Y, YF]):
                 return ret
             setattr(_wrapper, 'dom_dim', domain_dimension)
             setattr(_wrapper, 'cod_dim', codomain_dimension)
+            setattr(_wrapper, 'param_keys', param_keys)
             return _wrapper
         return _decorator
 
@@ -553,12 +598,12 @@ class DiscreteMode (Mode[Y, YF]):
         y0 : numpy.ndarray or float
             The initial state y0 of the system evolution.
         params : Any, optional
-            Arguments to pass to `fun`, by default None.
+            Arguments to pass to ``fun``, by default None.
         calc_jac : Boolean, optional
-            Flag to calculate the Jacobian matrix of the map from initial value to the result y, by default `True`.
+            Flag to calculate the Jacobian matrix of the map from initial value to the result y, by default ``True``.
         calc_hes : Boolean, optional
-            Flag to calculate the Hessian matrix of the map from initial value to the result y, by default `True`.
-            If True, calc_jac is automatically set to `True`.
+            Flag to calculate the Hessian matrix of the map from initial value to the result y, by default ``True``.
+            If ``True``, calc_jac is automatically set to ``True``.
         **options
             For future implementation.
 
@@ -576,17 +621,23 @@ class DiscreteMode (Mode[Y, YF]):
 
         # Convert functions into the general form
         if calc_jac:
-            params_arr = None if params is None else numpy.array([params[k] for k in self.param_keys])
+            params_arr = None if params is None or len(self.fun.param_keys) == 0 else numpy.array([params[k] for k in self.fun.param_keys])
+            if params_arr is None:
+                jac_fun = self.jac_fun
+                hes_fun = self.hes_fun
+            else:
+                jac_fun = lambda y: self.jac_fun(y, params_arr)
+                hes_fun = lambda y: self.hes_fun(y, params_arr)
             if calc_hes:
                 mapT = lambda n, y: numpy.hstack((
                     self.fun(y, params),
-                    numpy.array(self.jac_fun(y, params_arr)).flatten(order='F'),
-                    numpy.array(self.hes_fun(y, params_arr)).flatten(order='F')
+                    numpy.array(jac_fun(y)).flatten(order='F'),
+                    numpy.array(hes_fun(y)).flatten(order='F')
                 ))
             else:
                 mapT = lambda n, y: numpy.append(
                     self.fun(y, params),
-                    numpy.array(self.jac_fun(y, params_arr)).flatten(order='F')
+                    numpy.array(jac_fun(y)).flatten(order='F')
                 )
         else:
             mapT = lambda n, y: numpy.array(self.fun(y, params))
@@ -625,24 +676,24 @@ class DiscreteMode (Mode[Y, YF]):
         return result
 
 class SolveIvbmpResult(BasicResult, Generic[Y]):
-    """Result of `solve_ivbmp`
+    """Result of ``solve_ivbmp``
 
-    Result of `solve_ivbmp`
+    Result of ``solve_ivbmp``
 
     Parameters
     ----------
     y : numpy.ndarray or float
         The value of state after mapping.
     trans_history : list[str]
-        Transition history of the modes by index of `all_modes`.
+        Transition history of the modes by index of ``all_modes``.
     jac : numpy.ndarray, float, or None, optional
-        Jacobian matrix of the map, by default `None`.
+        Jacobian matrix of the map, by default ``None``.
     eigvals : numpy.ndarray, float or None, optional
-        Eigenvalues of the Jacobian matrix, by default `None`.
+        Eigenvalues of the Jacobian matrix, by default ``None``.
     eigvecs : numpy.ndarray or None, optional
-        Eigenvectors corresponding to `eigvals`, by default `None`.
+        Eigenvectors corresponding to ``eigvals``, by default ``None``.
     hes : numpy.ndarray, float, or None, optional
-        Hessian tensor of the map, by default `None`.
+        Hessian tensor of the map, by default ``None``.
     """
     def __init__(self,
         y: Y,
@@ -684,9 +735,9 @@ def solve_ivbmp(
     rtol=1e-6,
     map_count=1
 ) -> SolveIvbmpResult[numpy.ndarray] | SolveIvbmpResult[float]:
-    """Solve the initial value and boundary **modes** problem of the hybrid dynamical system
+    """Solve the initial value and boundary modes problem of the hybrid dynamical system
 
-    Solve the initial value and boundary **modes** problem of the hybrid dynamical system
+    Solve the initial value and boundary modes problem of the hybrid dynamical system
 
     Parameters
     ----------
@@ -695,21 +746,21 @@ def solve_ivbmp(
     all_modes : tuple of Modes
         Set of all modes.
     trans : dict
-        Transition function that maps from `current mode` to `next mode`.
+        Transition function that maps from ``current mode`` to ``next mode``.
     initial_mode : str
         Name of the initial mode.
     end_mode : Mode or None, optional
-        Name of the end mode, by default `None`. If `None`, the end mode in the method is the same as `initial_mode`.
+        Name of the end mode, by default ``None``. If ``None``, the end mode in the method is the same as ``initial_mode``.
     calc_jac : bool, optional
-        Flag to calculate the Jacobian matrix, by default `True`.
+        Flag to calculate the Jacobian matrix, by default ``True``.
     calc_hes : bool, optional
-        Flag to calculate the Hessian tensor, by default `True`.
+        Flag to calculate the Hessian tensor, by default ``True``.
     params : Parameter, optional
-        Parameter to pass to `fun` in all `mode`, by default None.
+        Parameter to pass to ``fun`` in all ``mode``, by default ``None``.
     rtol : float, optional
-        Relative torelance to pass to `solve_ivp`, by default `1e-6`.
+        Relative torelance to pass to ``solve_ivp``, by default ``1e-6``.
     map_count : int, optional
-        Count of maps, by default `1`.
+        Count of maps, by default ``1``.
 
     Returns
     -------
@@ -746,9 +797,9 @@ class PoincareMap(Generic[Y]):
     initial_mode : str
         Initial mode of the Poincare map.
     calc_jac : bool, optional
-        Flag to calculate Jacobian matrix of the map, by default `False`.
+        Flag to calculate Jacobian matrix of the map, by default ``False``.
     calc_hes : bool, optional
-        Flag to calculate Hessian matrix of the map, by default `False`.
+        Flag to calculate Hessian matrix of the map, by default ``False``.
     """
     def __init__(self,
         all_modes: tuple[Mode, ...],
@@ -782,7 +833,7 @@ class PoincareMap(Generic[Y]):
         y0 : numpy.ndarray or float
             Initial state.
         iterations : int, optional
-            Count of iterations of the map, by default `1`.
+            Count of iterations of the map, by default ``1``.
 
         Returns
         -------
@@ -808,7 +859,7 @@ class PoincareMap(Generic[Y]):
         y0 : numpy.ndarray | float
             Element to calculate the image under the Poincare map.
         iterations : int, optional
-            Count of the iteration of the map, by default `1`.
+            Count of the iteration of the map, by default ``1``.
 
         Returns
         -------
@@ -834,9 +885,9 @@ def solve_poincare_map(
     rtol=1e-6,
     map_count=1
 ) -> SolveIvbmpResult[Y]:
-    """Solve the initial value and boundary **modes** problem of the hybrid dynamical system
+    """Solve the initial value and boundary modes problem of the hybrid dynamical system
 
-    Solve the initial value and boundary **modes** problem of the hybrid dynamical system
+    Solve the initial value and boundary modes problem of the hybrid dynamical system
 
     Parameters
     ----------
@@ -845,21 +896,21 @@ def solve_poincare_map(
     all_modes : tuple of Modes
         Set of all modes.
     trans : dict
-        Transition function that maps from `current mode` to `next mode`.
+        Transition function that maps from ``current mode`` to ``next mode``.
     initial_mode : str
         Name of the initial mode.
     end_mode : Mode or None, optional
-        Name of the end mode, by default `None`. If `None`, the end mode in the method is the same as `initial_mode`.
+        Name of the end mode, by default ``None``. If ``None``, the end mode in the method is the same as ``initial_mode``.
     calc_jac : bool, optional
-        Flag to calculate the Jacobian matrix, by default `True`.
+        Flag to calculate the Jacobian matrix, by default ``True``.
     calc_hes : bool, optional
-        Flag to calculate the Hessian tensor, by default `True`.
+        Flag to calculate the Hessian tensor, by default ``True``.
     params : Parameter, optional
-        Parameter to pass to `fun` in all `mode`, by default None.
+        Parameter to pass to ``fun`` in all `mode`, by default ``None``.
     rtol : float, optional
-        Relative torelance to pass to `solve_ivp`, by default `1e-6`.
+        Relative torelance to pass to ``solve_ivp``, by default ``1e-6``.
     map_count : int, optional
-        Count of maps, by default `1`.
+        Count of maps, by default ``1``.
 
     Returns
     -------

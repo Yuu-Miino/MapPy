@@ -4,10 +4,8 @@ from typing import TypeVar, Generic, TypeAlias, Any
 from mappy import PoincareMap, BasicResult
 import numpy
 from scipy.optimize import root, OptimizeResult
-from ..tools import is_type_of, ContinuationFunResult, continuation
-
-Y = TypeVar('Y', numpy.ndarray, float)
-P: TypeAlias = dict[str, Any]
+from ..typing import is_type_of, Y, P
+from ..continuation import ContinuationFunResult, continuation
 
 def _cond_cycle(
     pmap: PoincareMap,
@@ -26,15 +24,15 @@ class FindCycleResult (BasicResult, Generic[Y]):
     success : bool
         True if finding is success, or False otherwise.
     y : numpy.ndarray, float, or None
-        Value of `y` if available.
+        Value of ``y`` if available.
     eigvals : numpy.ndarray, float, or None
-        Eigenvalues of the Poincare map at y, if available.
+        Eigenvalues of the Poincare map at ``y``, if available.
     eigvecs : numpy.ndarray or None
-        Eigenvectors corresponding to `eigvals` if available.
+        Eigenvectors corresponding to ``eigvals`` if available.
     itr : int
         Count of iterations of the method.
     err : numpy.ndarray
-        Error of `T(y) - y` in vector form, where `T` is the Poincare map.
+        Error of ``T(y) - y`` in vector form, where ``T`` is the Poincare map.
     """
     def __init__(
         self,
@@ -67,9 +65,9 @@ def find_cycle(
     y0 : numpy.ndarray or float
         Initial value for a periodic cycle.
     params : numpy.ndarray, float, or None
-        Parameter array to pass to `poincare_map`, by default `None`.
+        Parameter array to pass to ``poincare_map``, by default ``None``.
     period : int, optional
-        Period of the target periodic cycle, by default `1`.
+        Period of the target periodic cycle, by default ``1``.
 
     Returns
     -------
@@ -134,7 +132,7 @@ def trace_cycle(
     period: int = 1,
     show_progress: bool = False
 ) -> list[tuple[Y, P]]:
-    def lamb (y: Y, p: P):
+    def lamb (y: Y, p: P | None):
         ret = find_cycle(poincare_map, y, p, period)
         return ContinuationFunResult(ret.success, ret.y, p)
 

@@ -1,12 +1,9 @@
 import numpy as np
 from mappy import ContinuousMode as CM, DiscreteMode as DM, PoincareMap, Mode
 from mappy.root import *
-from mappy.tools import is_type_of
-
-Mode.param_keys = ['a', 'b', 'c', 'd', 'I']
 
 ## Izhikevich neuron model
-@CM.function(dimension=2)
+@CM.function(dimension=2, param_keys=['a', 'b', 'I'])
 def izhikevich (y: np.ndarray, param: dict | None)->np.ndarray:
     v, u = y
     if param is None: raise ValueError
@@ -22,22 +19,22 @@ def izhikevich (y: np.ndarray, param: dict | None)->np.ndarray:
 
 ## Firing border
 @CM.border(direction = 1)
-def fire_border(y, param):
+def fire_border(y, _):
     return y[0] - 30.0
 
 ## Firing jump
-@DM.function(domain_dimension = 2, codomain_dimension = 2)
+@DM.function(domain_dimension = 2, codomain_dimension = 2, param_keys=['c', 'd'])
 def jump(y, param):
     C = np.array([-30 + param['c'], param['d']])
     return y + C
 
 ## Dimension conversion (p: 1 -> 2, pinv: 2 -> 1)
-@DM.function(domain_dimension= 1, codomain_dimension= 2)
+@DM.function(domain_dimension= 1, codomain_dimension= 2, param_keys=['c'])
 def p(y, param):
     return np.array([0, 1]) * y + np.array([param['c'], 0])
 
 @DM.function(domain_dimension= 2, codomain_dimension= 1)
-def pinv(y, param):
+def pinv(y, _):
     return np.array([0, 1]) @ y
 
 ## Main

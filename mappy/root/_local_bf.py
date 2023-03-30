@@ -1,23 +1,22 @@
 """Local bifurcation set
 """
-from typing import TypeVar, TypeAlias, Any
+from typing import TypeVar
 from mappy import PoincareMap
 import numpy
 from scipy.optimize import root, OptimizeResult
-from ..tools import is_type_of, ContinuationFunResult, continuation
+from ..typing import is_type_of, Y, P
+from ..continuation import ContinuationFunResult, continuation
 from ._cycle import FindCycleResult
 
-Y = TypeVar('Y', numpy.ndarray, float)
-P: TypeAlias = dict[str, Any]
-V_LBF = TypeVar('V_LBF', bound=numpy.ndarray)
+VAR_LBF = TypeVar('VAR_LBF', bound=numpy.ndarray)
 
 def _cond_local_bf (
     pmap: PoincareMap,
-    var: V_LBF,
+    var: VAR_LBF,
     params: P,
     param_idx: str,
     period: int = 1
-) -> V_LBF:
+) -> VAR_LBF:
     y0 = var[0:pmap.dimension]
     param, theta = var[pmap.dimension:]
     inparams = params.copy()
@@ -137,10 +136,12 @@ def trace_local_bf (
     if bf_param_idx == cnt_param_idx:
         raise ParameterKeyError
 
-    def lamb (y:tuple[Y, float], p: P):
+    def lamb (y:tuple[Y, float], p: P | None):
         y00, theta0 = y
         if not is_type_of(y00, type(y0)):
             raise TypeError(type(y00), type(y0))
+        if p is None:
+            raise ValueError('Parameter is None but considering bifurcation problem.')
         ret = find_local_bf(poincare_map, y00, p, bf_param_idx, theta0, period)
         y1 = None
         if ret.success:
