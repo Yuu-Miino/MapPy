@@ -8,6 +8,7 @@ from scipy.integrate import solve_ivp, OdeSolution
 numpy.set_printoptions(precision=12)
 import sympy
 from ..tools import is_type_of
+import time
 
 Y = TypeVar('Y', numpy.ndarray, float)
 YF = TypeVar('YF', numpy.ndarray, float)
@@ -271,7 +272,10 @@ class ContinuousMode (Mode[Y, YF]):
         deriv[0:dim] = ode(y[0:dim])
 
         # Jaboain
+        start = time.time()
         jac = ode_jac(y[0:dim])
+        end = time.time()
+        print(end-start)
         deriv[dim:dim+(dim**2)] = (jac @ dydy0).flatten(order='F')
 
         # Hessian
@@ -891,13 +895,9 @@ def _exec_calculation (
 
     y0in = y0 if isinstance(y0, float) else y0.copy()
 
-    import time
     for _ in range(map_count):
         while 1:
-            start = time.time()
             result = current_mode.step(y0in, params=params, calc_jac=calc_jac, calc_hes=calc_hes, rtol=rtol)
-            end = time.time()
-            print(end-start)
             if result.status == 0:
                 raise NextModeNotFoundError
 
