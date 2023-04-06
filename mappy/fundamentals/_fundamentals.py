@@ -545,8 +545,8 @@ class ContinuousMode (Mode[Y, YF]):
             for i, ev in enumerate(self.borders):
                 if len(sol.t_events[i]) != 0:
                     if jact is not None and jac_fun is not None and devs is not None and d2evs is not None:
-                        dydt = numpy.array(ode_fun(0, y1))
-                        dbdy = numpy.array(devs[i](0, y1))
+                        dydt = numpy.array(ode_fun(0, y1), dtype=numpy.float64)
+                        dbdy = numpy.array(devs[i](0, y1), dtype=numpy.float64)
                         dot: numpy.float64 = numpy.dot(dbdy, dydt)
                         out = numpy.outer(dydt, dbdy)
                         B   = numpy.eye(dim) - out / dot
