@@ -67,7 +67,7 @@ def main ():
 
     res = trace_cycle(pmap, y0, param, 'I', 4.5, show_progress=True)
 
-    y1, p1 = res[-1]
+    y1, p1 = res[-1][0:2]
 
     ret = trace_local_bf (
         poincare_map=pmap,

@@ -1,5 +1,6 @@
 """Parameter continuation with given function
 """
+from typing import Any
 from collections.abc import Callable
 from numpy import ndarray
 from ..typing._type import is_type_of, P, YC
@@ -20,13 +21,16 @@ class ContinuationFunResult(BasicResult):
         the parameter of the step.
     p : dict[str, Any] | None
         Parameter dictionary.
+    others : dict[str, Any] | None
+        Any other values to return, by default ``None``.
     """
     def __init__(self,
-        success: bool, y: YC | None, p: P | None,
+        success: bool, y: YC | None, p: P | None, others: Any | None = None,
     ) -> None:
         self.success = success
         self.y = y
         self.p = p
+        self.others = others
 
 def continuation(
     fun: Callable[[YC, P | None], ContinuationFunResult],
@@ -36,7 +40,7 @@ def continuation(
     param_idx: str,
     resolution: int = 100,
     show_progress: bool = False,
-) -> list[tuple[YC, P]]:
+) -> list[tuple[YC, P, dict[str, Any] | None]]:
     """Parameter continuation
 
     The method to operate the parameter continuation of a given `fun`.
@@ -76,7 +80,7 @@ def continuation(
     y = y0.copy() if isinstance(y0, ndarray) else y0
     p = params.copy()
 
-    found: list[tuple[YC, P]] = []
+    found: list[tuple[YC, P, dict[str, Any] | None]] = []
 
     for i in range(resolution):
         ret = fun(y, p)
@@ -89,6 +93,7 @@ def continuation(
 
         y = ret.y
         p = ret.p
+        o = ret.others
 
         if y is None or p is None:
             break
@@ -100,15 +105,15 @@ def continuation(
 
         if show_progress:
             precision = 10
-            show_str: list[str] = ["\tSUCCESS" if ret.success else "FAILURE", f"{i+1:0{len(str(resolution))}d}"]
+            show_str: list[str] = ["\tSUCCESS", f"{i+1:0{len(str(resolution))}d}"]
             for val in [y, list(p.values())]:
                 if isinstance(val, float) or len(val) == 1:
                     show_str.append(f"{val:+.{precision}f}")
                 else:
-                    show_str.append(" ".join(["{:+."+str(precision)+"f}"] * len(val)).format(*val))
+                    show_str.append(str(val))
             print(" ".join(show_str), end="\r")
 
-        found.append((y, p))
+        found.append((y, p.copy(), None if o is None else o.copy()))
 
         if i != resolution-1:
             p[param_idx] += h

@@ -1,6 +1,6 @@
 """Cycle (periodic point)
 """
-from typing import TypeVar, Generic, TypeAlias, Any
+from typing import Generic, Any
 from mappy import PoincareMap, BasicResult
 import numpy
 from scipy.optimize import root, OptimizeResult
@@ -131,10 +131,11 @@ def trace_cycle(
     resolution: int = 100,
     period: int = 1,
     show_progress: bool = False
-) -> list[tuple[Y, P]]:
+) -> list[tuple[Y, P, dict[str, Any] | None]]:
     def lamb (y: Y, p: P | None):
         ret = find_cycle(poincare_map, y, p, period)
-        return ContinuationFunResult(ret.success, ret.y, p)
+        return ContinuationFunResult(ret.success, ret.y, p,
+            {'eigvals': ret.eigvals, 'eigvecs': ret.eigvecs, 'itr': ret.itr, 'err': ret.err})
 
     return continuation(
         lamb,

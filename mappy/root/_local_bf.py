@@ -1,6 +1,6 @@
 """Local bifurcation set
 """
-from typing import TypeVar
+from typing import TypeVar, Any
 from mappy import PoincareMap
 import numpy
 from scipy.optimize import root, OptimizeResult
@@ -132,7 +132,7 @@ def trace_local_bf (
     resolution: int = 100,
     period: int = 1,
     show_progress: bool = False
-) -> list[tuple[tuple[Y, float], P]]:
+) -> list[tuple[tuple[Y, float], P, dict[str, Any] | None]]:
     if bf_param_idx == cnt_param_idx:
         raise ParameterKeyError
 
@@ -151,7 +151,8 @@ def trace_local_bf (
         p1 = ret.params
         if not is_type_of(p1, type(p)):
             raise TypeError
-        return ContinuationFunResult(ret.success, y1, p1)
+        return ContinuationFunResult(ret.success, y1, p1,
+            {'theta': ret.theta, 'eigvals': ret.eigvals, 'eigvecs': ret.eigvecs, 'itr': ret.itr, 'err': ret.err})
 
     return continuation(
         lamb,

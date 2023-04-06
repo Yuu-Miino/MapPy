@@ -93,7 +93,33 @@ def main ():
     }
 
     pmap = PoincareMap(all_modes, trans, 'p1', calc_jac=True, calc_hes=True)
-    print(pmap.image_detail(y0, param, 2))
+    print(pmap.image_detail(y0, param))
+
+    ret = trace_cycle(
+        poincare_map=pmap,
+        y0=y0,
+        params=param,
+        period=2,
+        cnt_param_idx='B1',
+        end_val=7.7, show_progress=True,
+        resolution=10
+    )
+
+    yb, paramb = ret[-1][0:2]
+
+    ret_lbf = trace_local_bf(
+        poincare_map=pmap,
+        y0=yb,
+        params=paramb,
+        bf_param_idx='B1',
+        theta=np.pi,
+        cnt_param_idx='V',
+        end_val=3,
+        period=1,
+        resolution=100,
+        show_progress=True
+    )
+    print(len(ret_lbf))
 
 if __name__=="__main__":
     main()
