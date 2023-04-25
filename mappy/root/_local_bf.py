@@ -8,32 +8,33 @@ from ..typing import is_type_of, Y, P
 from ..continuation import ContinuationFunResult, continuation
 from ._cycle import FindCycleResult
 
-VAR_LBF = TypeVar('VAR_LBF', bound=numpy.ndarray)
+VAR_LBF = TypeVar("VAR_LBF", bound=numpy.ndarray)
 
-def _cond_local_bf (
-    pmap: PoincareMap,
-    var: VAR_LBF,
-    params: P,
-    param_idx: str,
-    period: int = 1
+
+def _cond_local_bf(
+    pmap: PoincareMap, var: VAR_LBF, params: P, param_idx: str, period: int = 1
 ) -> VAR_LBF:
-    y0 = var[0:pmap.dimension]
-    param, theta = var[pmap.dimension:]
+    y0 = var[0 : pmap.dimension]
+    param, theta = var[pmap.dimension :]
     inparams = params.copy()
     inparams[param_idx] = param
 
     res = pmap.image_detail(y0, inparams, iterations=period)
-    det = numpy.linalg.det(res.jac - numpy.exp(1j*theta) * numpy.eye(pmap.dimension))
+    det = numpy.linalg.det(res.jac - numpy.exp(1j * theta) * numpy.eye(pmap.dimension))
 
-    ret = numpy.empty(pmap.dimension + 2, )
-    ret[0:pmap.dimension]  = res.y - y0
-    ret[pmap.dimension:] = numpy.real(det), numpy.imag(det)
+    ret = numpy.empty(
+        pmap.dimension + 2,
+    )
+    ret[0 : pmap.dimension] = res.y - y0
+    ret[pmap.dimension :] = numpy.real(det), numpy.imag(det)
     if not is_type_of(ret, type(var)):
         raise TypeError(type(ret), type(var))
     return ret
 
+
 class FindLocalBfResult(FindCycleResult[Y]):
-    def __init__(self,
+    def __init__(
+        self,
         itr: int,
         err: numpy.ndarray | float,
         success: bool = False,
@@ -41,13 +42,14 @@ class FindLocalBfResult(FindCycleResult[Y]):
         eigvals: Y | None = None,
         eigvecs: numpy.ndarray | None = None,
         theta: float | None = None,
-        params: P | None = None
+        params: P | None = None,
     ) -> None:
         super().__init__(itr, err, success, y, eigvals, eigvecs)
         self.theta = theta
         self.params = params
 
-def find_local_bf (
+
+def find_local_bf(
     poincare_map: PoincareMap[Y],
     y0: Y,
     params: P,
@@ -56,11 +58,7 @@ def find_local_bf (
     period: int = 1,
 ) -> FindLocalBfResult[Y]:
     objective_fun = lambda y: _cond_local_bf(
-        pmap=poincare_map,
-        var=y,
-        params=params,
-        param_idx=param_idx,
-        period=period
+        pmap=poincare_map, var=y, params=params, param_idx=param_idx, period=period
     )
 
     var = numpy.array(y0).squeeze()
@@ -72,8 +70,8 @@ def find_local_bf (
     theta1: float | None = None
     err = rt.fun
     if rt.success:
-        y1 = rt.x[0:poincare_map.dimension]
-        param1, theta1 = rt.x[poincare_map.dimension:]
+        y1 = rt.x[0 : poincare_map.dimension]
+        param1, theta1 = rt.x[poincare_map.dimension :]
         inparams[param_idx] = param1
 
         jac = poincare_map.image_detail(y1, inparams, period).jac
@@ -104,24 +102,26 @@ def find_local_bf (
         if not is_type_of(eigvals, type(y0)) and eigvals is not None:
             raise TypeError((type(eigvals), type(y0)))
 
-    return FindLocalBfResult[Y] (
+    return FindLocalBfResult[Y](
         success=rt.success,
         y=y1,
         theta=theta1,
         params=inparams,
-        eigvals = eigvals,
-        eigvecs = eigvecs,
+        eigvals=eigvals,
+        eigvecs=eigvecs,
         itr=rt.nfev,
-        err=err
+        err=err,
     )
 
-class ParameterKeyError(Exception):
-    """Error for conflict of the parameter keys
-    """
-    def __str__(self) -> str:
-        return '`param_idx` and `cnt_idx` must be different value.'
 
-def trace_local_bf (
+class ParameterKeyError(Exception):
+    """Error for conflict of the parameter keys"""
+
+    def __str__(self) -> str:
+        return "`param_idx` and `cnt_idx` must be different value."
+
+
+def trace_local_bf(
     poincare_map: PoincareMap[Y],
     y0: Y,
     params: P,
@@ -131,17 +131,17 @@ def trace_local_bf (
     end_val: float,
     resolution: int = 100,
     period: int = 1,
-    show_progress: bool = False
+    show_progress: bool = False,
 ) -> list[tuple[tuple[Y, float], P, dict[str, Any] | None]]:
     if bf_param_idx == cnt_param_idx:
         raise ParameterKeyError
 
-    def lamb (y:tuple[Y, float], p: P | None):
+    def lamb(y: tuple[Y, float], p: P | None):
         y00, theta0 = y
         if not is_type_of(y00, type(y0)):
             raise TypeError(type(y00), type(y0))
         if p is None:
-            raise ValueError('Parameter is None but considering bifurcation problem.')
+            raise ValueError("Parameter is None but considering bifurcation problem.")
         ret = find_local_bf(poincare_map, y00, p, bf_param_idx, theta0, period)
         y1 = None
         if ret.success:
@@ -151,8 +151,18 @@ def trace_local_bf (
         p1 = ret.params
         if not is_type_of(p1, type(p)):
             raise TypeError
-        return ContinuationFunResult(ret.success, y1, p1,
-            {'theta': ret.theta, 'eigvals': ret.eigvals, 'eigvecs': ret.eigvecs, 'itr': ret.itr, 'err': ret.err})
+        return ContinuationFunResult(
+            ret.success,
+            y1,
+            p1,
+            {
+                "theta": ret.theta,
+                "eigvals": ret.eigvals,
+                "eigvecs": ret.eigvecs,
+                "itr": ret.itr,
+                "err": ret.err,
+            },
+        )
 
     return continuation(
         lamb,
@@ -161,5 +171,5 @@ def trace_local_bf (
         end_val,
         param_idx=cnt_param_idx,
         resolution=resolution,
-        show_progress=show_progress
+        show_progress=show_progress,
     )

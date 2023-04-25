@@ -2,6 +2,7 @@
 #
 import sys
 import os
+
 sys.path.insert(0, os.path.abspath("../.."))
 
 # For the full list of built-in configuration values, see the documentation:
@@ -10,11 +11,12 @@ sys.path.insert(0, os.path.abspath("../.."))
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'MapPy'
-copyright = '2023, Yuu Miino'
-author = 'Yuu Miino'
+project = "MapPy"
+copyright = "2023, Yuu Miino"
+author = "Yuu Miino"
 
 from mappy import __version__
+
 version = __version__
 release = version
 
@@ -22,32 +24,29 @@ release = version
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    'sphinx.ext.autodoc',
-    'numpydoc',
-    'sphinx.ext.autosummary',
-    'sphinx.ext.mathjax',
-    'sphinx_design'
+    "sphinx.ext.autodoc",
+    "numpydoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.mathjax",
+    "sphinx_design",
 ]
 
-autosummary_generate=True
+autosummary_generate = True
 
 autodoc_typehints = "none"
-autodoc_default_options = {
-    'inherited_members': False,
-    'show-inheritance': False
-}
+autodoc_default_options = {"inherited_members": False, "show-inheritance": False}
 
-templates_path = ['_templates']
+templates_path = ["_templates"]
 exclude_patterns = []
 
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'pydata_sphinx_theme'
-html_static_path = ['_static']
+html_theme = "pydata_sphinx_theme"
+html_static_path = ["_static"]
 html_css_files = [
-    'styles/MapPy.css',
+    "styles/MapPy.css",
 ]
 
 html_theme_options = {
@@ -60,7 +59,7 @@ html_theme_options = {
         "version_match": version,
         "json_url": "https://yuu-miino.github.io/doc.mappy/latest/_static/switcher.json",
     },
-    "navbar_start": ["navbar-logo", "version-switcher"]
+    "navbar_start": ["navbar-logo", "version-switcher"],
 }
 
 html_list = ["search-field.html", "sidebar-nav-bs.html"]
@@ -69,17 +68,17 @@ html_sidebars = {
 }
 
 mathjax3_config = {
-    'tex': {
-        'macros': {
-            'bm': [r"\boldsymbol{#1}", 1],
-            'deriv': [r"\frac{d#1}{d#2}", 2],
-            'pderiv': [r"\frac{\partial#1}{\partial#2}", 2],
-            'parens': [r"\left(#1\right)", 1],
-            'braces': [r"\left\{#1\right\}", 1],
-            'brackets': [r"\left[#1\rigth]", 1],
-            'set': [r"\braces{#1}", 1],
-            'case': [r"\left{#1\right.", 1],
-            'R': [r"\mathbb{R}"]
+    "tex": {
+        "macros": {
+            "bm": [r"\boldsymbol{#1}", 1],
+            "deriv": [r"\frac{d#1}{d#2}", 2],
+            "pderiv": [r"\frac{\partial#1}{\partial#2}", 2],
+            "parens": [r"\left(#1\right)", 1],
+            "braces": [r"\left\{#1\right\}", 1],
+            "brackets": [r"\left[#1\rigth]", 1],
+            "set": [r"\braces{#1}", 1],
+            "case": [r"\left{#1\right.", 1],
+            "R": [r"\mathbb{R}"],
         }
     }
 }

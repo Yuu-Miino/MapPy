@@ -7,16 +7,13 @@ from scipy.optimize import root, OptimizeResult
 from ..typing import is_type_of, Y, P
 from ..continuation import ContinuationFunResult, continuation
 
-def _cond_cycle(
-    pmap: PoincareMap,
-    y0: Y,
-    params: P | None,
-    period: int
-) -> Y:
-    y1 = pmap.image(y0, params, period)
-    return y1-y0
 
-class FindCycleResult (BasicResult, Generic[Y]):
+def _cond_cycle(pmap: PoincareMap, y0: Y, params: P | None, period: int) -> Y:
+    y1 = pmap.image(y0, params, period)
+    return y1 - y0
+
+
+class FindCycleResult(BasicResult, Generic[Y]):
     """Result of finding a periodic cycle
 
     Parameters
@@ -34,6 +31,7 @@ class FindCycleResult (BasicResult, Generic[Y]):
     err : numpy.ndarray
         Error of ``T(y) - y`` in vector form, where ``T`` is the Poincare map.
     """
+
     def __init__(
         self,
         itr: int,
@@ -41,7 +39,7 @@ class FindCycleResult (BasicResult, Generic[Y]):
         success: bool = False,
         y: Y | None = None,
         eigvals: Y | None = None,
-        eigvecs: numpy.ndarray | None = None
+        eigvecs: numpy.ndarray | None = None,
     ) -> None:
         self.success = success
         self.y = y
@@ -50,11 +48,9 @@ class FindCycleResult (BasicResult, Generic[Y]):
         self.itr = itr
         self.err = err
 
+
 def find_cycle(
-    poincare_map: PoincareMap,
-    y0: Y,
-    params: P | None = None,
-    period: int = 1
+    poincare_map: PoincareMap, y0: Y, params: P | None = None, period: int = 1
 ) -> FindCycleResult[Y]:
     """Find a periodic cycle of given map
 
@@ -113,14 +109,10 @@ def find_cycle(
         if not is_type_of(eigvals, type(y0)) and eigvals is not None:
             raise TypeError((type(eigvals), type(y0)))
 
-    return FindCycleResult[Y] (
-        success=rt.success,
-        y=y1,
-        eigvals = eigvals,
-        eigvecs = eigvecs,
-        itr=rt.nfev,
-        err=err
+    return FindCycleResult[Y](
+        success=rt.success, y=y1, eigvals=eigvals, eigvecs=eigvecs, itr=rt.nfev, err=err
     )
+
 
 def trace_cycle(
     poincare_map: PoincareMap[Y],
@@ -130,12 +122,21 @@ def trace_cycle(
     end_val: float,
     resolution: int = 100,
     period: int = 1,
-    show_progress: bool = False
+    show_progress: bool = False,
 ) -> list[tuple[Y, P, dict[str, Any] | None]]:
-    def lamb (y: Y, p: P | None):
+    def lamb(y: Y, p: P | None):
         ret = find_cycle(poincare_map, y, p, period)
-        return ContinuationFunResult(ret.success, ret.y, p,
-            {'eigvals': ret.eigvals, 'eigvecs': ret.eigvecs, 'itr': ret.itr, 'err': ret.err})
+        return ContinuationFunResult(
+            ret.success,
+            ret.y,
+            p,
+            {
+                "eigvals": ret.eigvals,
+                "eigvecs": ret.eigvecs,
+                "itr": ret.itr,
+                "err": ret.err,
+            },
+        )
 
     return continuation(
         lamb,
@@ -144,5 +145,5 @@ def trace_cycle(
         end_val,
         param_idx=cnt_param_idx,
         resolution=resolution,
-        show_progress=show_progress
+        show_progress=show_progress,
     )

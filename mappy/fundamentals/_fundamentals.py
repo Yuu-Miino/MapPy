@@ -5,31 +5,39 @@ from collections.abc import Callable
 from functools import wraps
 import numpy
 from scipy.integrate import solve_ivp, OdeSolution
+
 numpy.set_printoptions(precision=12)
 import sympy
 from ._core import BasicResult
 from ..typing import is_type_of, Y, YF, YB, P
 
-class TransitionKeyError (Exception):
-    """Exception for the undefined transition
-    """
+
+class TransitionKeyError(Exception):
+    """Exception for the undefined transition"""
+
     def __init__(self, current_mode: str) -> None:
         self.current_mode = current_mode
+
     def __str__(self) -> str:
-        return (f'[Transition] Transition rule of `{self.current_mode}` is undefined.')
-class AllModesKeyError (Exception):
-    """Exception for the undefined mode
-    """
+        return f"[Transition] Transition rule of `{self.current_mode}` is undefined."
+
+
+class AllModesKeyError(Exception):
+    """Exception for the undefined mode"""
+
     def __init__(self, modename: str) -> None:
         self.modename = modename
-    def __str__(self) -> str:
-        return (f'[All modes] Mode with name `{self.modename}` is undefined.')
 
-class NextModeNotFoundError (Exception):
-    """Exception that the next mode is not found
-    """
     def __str__(self) -> str:
-        return (f'[Next mode] Not found next mode. The ODE solver finished with status ``0``.')
+        return f"[All modes] Mode with name `{self.modename}` is undefined."
+
+
+class NextModeNotFoundError(Exception):
+    """Exception that the next mode is not found"""
+
+    def __str__(self) -> str:
+        return f"[Next mode] Not found next mode. The ODE solver finished with status ``0``."
+
 
 class ModeStepResult(BasicResult, Generic[Y]):
     """Result of ``step`` in ``Mode``
@@ -55,14 +63,16 @@ class ModeStepResult(BasicResult, Generic[Y]):
         OdeSolution instance of ``solve_ivp`` in the continuous-time mode, by default ``None``.
 
     """
-    def __init__(self,
+
+    def __init__(
+        self,
         status: int,
         y: Y,
         tend: float | None = None,
         jac: numpy.ndarray | float | None = None,
         hes: numpy.ndarray | float | None = None,
         i_border: int | None = None,
-        sol: OdeSolution | None = None
+        sol: OdeSolution | None = None,
     ) -> None:
         self.status = status
         self.y = y
@@ -71,6 +81,7 @@ class ModeStepResult(BasicResult, Generic[Y]):
         self.hes = hes
         self.sol = sol
         self.tend = tend
+
 
 class Mode(Generic[Y, YF]):
     """Base Class of all modes
@@ -86,21 +97,18 @@ class Mode(Generic[Y, YF]):
 
     """
 
-    def __init__(self,
-        name: str,
-        fun: Callable[[Y, P | None], YF]
-    ) -> None:
+    def __init__(self, name: str, fun: Callable[[Y, P | None], YF]) -> None:
         self.name = name
         self.fun = fun
 
         # Jacobian for fun by SymPy
-        x_symb = sympy.symbols(' '.join([f'x_{i}' for i in range(self.fun.dom_dim)]))
+        x_symb = sympy.symbols(" ".join([f"x_{i}" for i in range(self.fun.dom_dim)]))
         p_symb: P | None = None
         p_symb_list: list[sympy.Symbol] | None = None
         if len(self.fun.param_keys) > 0:
             p_symb = {k: sympy.Symbol(k) for k in self.fun.param_keys}
             p_symb_list = list(p_symb.values())
-        if hasattr(self.fun, 'cod_dim') and self.fun.cod_dim == 1:
+        if hasattr(self.fun, "cod_dim") and self.fun.cod_dim == 1:
             f = sympy.Matrix([fun(x_symb, p_symb)])
         else:
             f = sympy.Matrix(fun(x_symb, p_symb))
@@ -113,11 +121,11 @@ class Mode(Generic[Y, YF]):
             else:
                 jac = f.jacobian(x_symb)
         if p_symb is None:
-            jac_fun = sympy.lambdify([x_symb], jac, 'numpy')
+            jac_fun = sympy.lambdify([x_symb], jac, "numpy")
         else:
-            jac_fun = sympy.lambdify((x_symb, p_symb_list), jac, 'numpy')
+            jac_fun = sympy.lambdify((x_symb, p_symb_list), jac, "numpy")
         if jac_fun is None:
-            raise Exception('[JAC_FUN] lambdify returns None')
+            raise Exception("[JAC_FUN] lambdify returns None")
         self.jac_fun = jac_fun
 
         # Hessian for fun by SymPy
@@ -126,22 +134,23 @@ class Mode(Generic[Y, YF]):
         else:
             hess = sympy.derive_by_array(jac, x_symb)
         if p_symb is None:
-            hes_fun = sympy.lambdify([x_symb], hess, 'numpy')
+            hes_fun = sympy.lambdify([x_symb], hess, "numpy")
         else:
-            hes_fun = sympy.lambdify((x_symb, p_symb_list), hess, 'numpy')
+            hes_fun = sympy.lambdify((x_symb, p_symb_list), hess, "numpy")
         if hes_fun is None:
-            raise Exception('[HES_FUN] lambdify returns None')
+            raise Exception("[HES_FUN] lambdify returns None")
         self.hes_fun = hes_fun
 
-    def __hash__(self): return hash(id(self))
-    def __eq__(self, x): return x is self
-    def __ne__(self, x): return x is not self
+    def __hash__(self):
+        return hash(id(self))
 
-    def step(self,
-        y0: Y,
-        params: P | None = None,
-        **options
-    ) -> ModeStepResult[YF]:
+    def __eq__(self, x):
+        return x is self
+
+    def __ne__(self, x):
+        return x is not self
+
+    def step(self, y0: Y, params: P | None = None, **options) -> ModeStepResult[YF]:
         """Step to the next mode
 
         The method to operate the step of the ``mode``.
@@ -164,7 +173,8 @@ class Mode(Generic[Y, YF]):
 
         return NotImplemented
 
-class ContinuousMode (Mode[Y, YF]):
+
+class ContinuousMode(Mode[Y, YF]):
     """Mode for the continuos-time dynamical system
 
     The class to define the mode for continuos-time dynamical systems.
@@ -186,7 +196,8 @@ class ContinuousMode (Mode[Y, YF]):
 
     """
 
-    def __init__(self,
+    def __init__(
+        self,
         name: str,
         fun: Callable[[Y, P | None], YF],
         borders: list[Callable[[Y, P | None], float]],
@@ -197,7 +208,7 @@ class ContinuousMode (Mode[Y, YF]):
         self.borders = borders
 
         # Jacobian for borders by SymPy
-        x_symb = sympy.symbols(' '.join([f'x_{i}' for i in range(self.fun.dom_dim)]))
+        x_symb = sympy.symbols(" ".join([f"x_{i}" for i in range(self.fun.dom_dim)]))
         p_symb: P | None = None
         p_symb_list: list[sympy.Symbol] | None = None
         if len(self.fun.param_keys) > 0:
@@ -214,11 +225,11 @@ class ContinuousMode (Mode[Y, YF]):
             else:
                 jac = sympy.derive_by_array(f, x_symb)
             if p_symb is None:
-                jac_fun = sympy.lambdify([x_symb], jac, 'numpy')
+                jac_fun = sympy.lambdify([x_symb], jac, "numpy")
             else:
-                jac_fun = sympy.lambdify((x_symb, p_symb_list), jac, 'numpy')
+                jac_fun = sympy.lambdify((x_symb, p_symb_list), jac, "numpy")
             if jac_fun is None:
-                raise Exception('[JAC_BORDERS] lambdify returns None')
+                raise Exception("[JAC_BORDERS] lambdify returns None")
             self.jac_borders.append(jac_fun)
 
             # Hessian
@@ -227,45 +238,49 @@ class ContinuousMode (Mode[Y, YF]):
             else:
                 hess = sympy.derive_by_array(jac, x_symb)
             if p_symb is None:
-                hes_fun = sympy.lambdify([x_symb], hess, 'numpy')
+                hes_fun = sympy.lambdify([x_symb], hess, "numpy")
             else:
-                hes_fun = sympy.lambdify((x_symb, p_symb_list), hess, 'numpy')
+                hes_fun = sympy.lambdify((x_symb, p_symb_list), hess, "numpy")
             if hes_fun is None:
-                raise Exception('[HES_BORDERS] lambdify returns None')
+                raise Exception("[HES_BORDERS] lambdify returns None")
             self.hes_borders.append(hes_fun)
 
-    def __ode_jac (self,
-            y: numpy.ndarray,
-            params: P | None = None,
-            params_arr: numpy.ndarray | None = None,
-        ) -> numpy.ndarray:
+    def __ode_jac(
+        self,
+        y: numpy.ndarray,
+        params: P | None = None,
+        params_arr: numpy.ndarray | None = None,
+    ) -> numpy.ndarray:
         dim = self.fun.dom_dim
-        dydy0 = y[dim:dim+(dim**2)].reshape((dim, dim), order='F')
+        dydy0 = y[dim : dim + (dim**2)].reshape((dim, dim), order="F")
 
-        ode     = lambda y: self.fun(y, params)
+        ode = lambda y: self.fun(y, params)
         if params_arr is None:
             ode_jac = self.jac_fun
         else:
             ode_jac = lambda y: self.jac_fun(y, params_arr)
 
-        deriv = numpy.empty(dim+(dim**2))
+        deriv = numpy.empty(dim + (dim**2))
         deriv[0:dim] = ode(y[0:dim])
         jac = ode_jac(y[0:dim])
 
-        deriv[dim:dim+(dim**2)] = (jac @ dydy0).flatten(order='F')
+        deriv[dim : dim + (dim**2)] = (jac @ dydy0).flatten(order="F")
         return deriv
 
-    def __ode_hes (self,
-            y: numpy.ndarray,
-            params: P | None = None,
-            params_arr: numpy.ndarray | None = None,
-        ) -> numpy.ndarray:
+    def __ode_hes(
+        self,
+        y: numpy.ndarray,
+        params: P | None = None,
+        params_arr: numpy.ndarray | None = None,
+    ) -> numpy.ndarray:
         dim = self.fun.dom_dim
 
-        dydy0 = y[dim:dim+(dim**2)].reshape((dim, dim), order='F')
+        dydy0 = y[dim : dim + (dim**2)].reshape((dim, dim), order="F")
         ui, uj = numpy.triu_indices(dim)
         d2ydy02 = numpy.empty(dim**3).reshape(dim, dim, dim)
-        d2ydy02[ui, uj] = y[dim+(dim**2):dim+(dim**2)+(dim**2*(dim+1)//2)].reshape(dim*(dim+1)//2, dim)
+        d2ydy02[ui, uj] = y[
+            dim + (dim**2) : dim + (dim**2) + (dim**2 * (dim + 1) // 2)
+        ].reshape(dim * (dim + 1) // 2, dim)
         d2ydy02[uj, ui] = d2ydy02[ui, uj].copy()
         d2ydy02 = d2ydy02.transpose(0, 2, 1)
 
@@ -277,19 +292,21 @@ class ContinuousMode (Mode[Y, YF]):
             ode_jac = lambda y: self.jac_fun(y, params_arr)
             ode_hes = lambda y: self.hes_fun(y, params_arr)
 
-        deriv = numpy.empty(dim+(dim**2)+(dim**2*(dim+1)//2))
+        deriv = numpy.empty(dim + (dim**2) + (dim**2 * (dim + 1) // 2))
         # ODE
         deriv[0:dim] = ode(y[0:dim])
 
         # Jaboain
         jac = ode_jac(y[0:dim])
-        deriv[dim:dim+(dim**2)] = (jac @ dydy0).flatten(order='F')
+        deriv[dim : dim + (dim**2)] = (jac @ dydy0).flatten(order="F")
 
         # Hessian
         hes = ode_hes(y[0:dim])
-        deriv[dim+(dim**2):dim+(dim**2)+(dim**2*(dim+1)//2)] = (
-            (hes @ dydy0).T @ dydy0 + jac @ d2ydy02
-        ).transpose(0, 2, 1)[ui, uj].flatten()
+        deriv[dim + (dim**2) : dim + (dim**2) + (dim**2 * (dim + 1) // 2)] = (
+            ((hes @ dydy0).T @ dydy0 + jac @ d2ydy02)
+            .transpose(0, 2, 1)[ui, uj]
+            .flatten()
+        )
         return deriv
 
     @classmethod
@@ -346,14 +363,17 @@ class ContinuousMode (Mode[Y, YF]):
             mode1 = CM(name = 'mode1', fun = izhikevich)
 
         """
+
         def _decorator(fun: Callable[[Y, P], YF]) -> Callable[[Y, P], YF]:
             @wraps(fun)
             def _wrapper(y: Y, p: P) -> YF:
                 ret = fun(y, p)
                 return ret
-            setattr(_wrapper, 'dom_dim', dimension)
-            setattr(_wrapper, 'param_keys', param_keys)
+
+            setattr(_wrapper, "dom_dim", dimension)
+            setattr(_wrapper, "param_keys", param_keys)
             return _wrapper
+
         return _decorator
 
     @classmethod
@@ -422,22 +442,21 @@ class ContinuousMode (Mode[Y, YF]):
         --------
         mappy.ContinuousMode
         """
+
         def _decorator(fun: Callable[[Y, P | None], YB]) -> Callable[[Y, P | None], YB]:
             @wraps(fun)
             def _wrapper(y: Y, p: P | None) -> YB:
                 ret = fun(y, p)
                 return ret
-            setattr(_wrapper, 'direction', direction)
+
+            setattr(_wrapper, "direction", direction)
             return _wrapper
+
         return _decorator
 
-    def step(self,
-        y0: Y,
-        params: P | None = None,
-        calc_jac = True,
-        calc_hes = True,
-        **options
-    )->ModeStepResult[YF]:
+    def step(
+        self, y0: Y, params: P | None = None, calc_jac=True, calc_hes=True, **options
+    ) -> ModeStepResult[YF]:
         """Step to the next mode
 
         Step to the next mode
@@ -462,18 +481,22 @@ class ContinuousMode (Mode[Y, YF]):
         """
 
         # Replace the function for ODE and borders with the compatible forms
-        ode_fun = lambda t, y : self.fun(y, params)
+        ode_fun = lambda t, y: self.fun(y, params)
         calc_jac = calc_hes or calc_jac
 
         borders = []
         for ev in self.borders:
             evi = lambda t, y, ev=ev: ev(y, params)
-            evi.terminal  = True
+            evi.terminal = True
             evi.direction = ev.direction
             borders.append(evi)
 
         if calc_jac:
-            params_arr = None if params is None or len(self.fun.param_keys) == 0 else numpy.array([params[k] for k in self.fun.param_keys])
+            params_arr = (
+                None
+                if params is None or len(self.fun.param_keys) == 0
+                else numpy.array([params[k] for k in self.fun.param_keys])
+            )
             jac_fun = lambda t, y: self.jac_fun(y, params_arr)
             if calc_hes:
                 ode = lambda t, y: self.__ode_hes(y, params, params_arr)
@@ -497,9 +520,9 @@ class ContinuousMode (Mode[Y, YF]):
                 d2evs.append(d2evi)
         else:
             jac_fun = None
-            ode     = lambda t, y: self.fun(y, params)
-            devs    = None
-            d2evs   = None
+            ode = lambda t, y: self.fun(y, params)
+            devs = None
+            d2evs = None
 
         i_border: int | None = None
         dim = self.fun.dom_dim
@@ -514,7 +537,7 @@ class ContinuousMode (Mode[Y, YF]):
         if calc_jac:
             y0in = numpy.append(y0in, numpy.eye(dim).flatten())
         if calc_hes:
-            y0in = numpy.append(y0in, numpy.zeros(dim**2*(dim+1)//2))
+            y0in = numpy.append(y0in, numpy.zeros(dim**2 * (dim + 1) // 2))
 
         ## Main loop: solve initial value problem
         sol = solve_ivp(ode, [0, self.max_interval], y0in, events=borders, **options)
@@ -522,9 +545,11 @@ class ContinuousMode (Mode[Y, YF]):
         ## Set values to the result instance
         y1: YF = sol.y.T[-1][0:dim] if dim != 1 else sol.y.T[-1][0]
 
-        if calc_jac: # If calculate Jacobian matrix
-            jact = numpy.array(sol.y.T[-1][dim:dim+(dim**2)]).reshape((dim, dim), order='F')
-            jac  = jact.copy()
+        if calc_jac:  # If calculate Jacobian matrix
+            jact = numpy.array(sol.y.T[-1][dim : dim + (dim**2)]).reshape(
+                (dim, dim), order="F"
+            )
+            jac = jact.copy()
         else:
             jact = None
             jac = None
@@ -532,10 +557,14 @@ class ContinuousMode (Mode[Y, YF]):
         if calc_hes:
             ui, uj = numpy.triu_indices(dim)
             hest = numpy.empty(dim**3).reshape(dim, dim, dim)
-            hest[ui, uj] = numpy.array(sol.y.T[-1][dim+(dim**2):dim+(dim**2)+(dim**2*(dim+1)//2)]).reshape(dim*(dim+1)//2, dim)
+            hest[ui, uj] = numpy.array(
+                sol.y.T[-1][
+                    dim + (dim**2) : dim + (dim**2) + (dim**2 * (dim + 1) // 2)
+                ]
+            ).reshape(dim * (dim + 1) // 2, dim)
             hest[uj, ui] = hest[ui, uj].copy()
             hest = hest.transpose(0, 2, 1)
-            hes  = hest.copy()
+            hes = hest.copy()
         else:
             hest = None
             hes = None
@@ -544,35 +573,53 @@ class ContinuousMode (Mode[Y, YF]):
             # For each borders
             for i, ev in enumerate(self.borders):
                 if len(sol.t_events[i]) != 0:
-                    if jact is not None and jac_fun is not None and devs is not None and d2evs is not None:
+                    if (
+                        jact is not None
+                        and jac_fun is not None
+                        and devs is not None
+                        and d2evs is not None
+                    ):
                         dydt = numpy.array(ode_fun(0, y1), dtype=numpy.float64)
                         dbdy = numpy.array(devs[i](0, y1), dtype=numpy.float64)
                         dot: numpy.float64 = numpy.dot(dbdy, dydt)
                         out = numpy.outer(dydt, dbdy)
-                        B   = numpy.eye(dim) - out / dot
+                        B = numpy.eye(dim) - out / dot
                         jac = B @ jact
 
                         if hest is not None:
-                            dfdy    = numpy.array(jac_fun(0, y1))
-                            d2bdy2  = numpy.array(d2evs[i](0, y1))
+                            dfdy = numpy.array(jac_fun(0, y1))
+                            d2bdy2 = numpy.array(d2evs[i](0, y1))
 
-                            dBdy = - 1.0 / dot * (
-                                numpy.tensordot(dfdy.T, dbdy, axes=0) + numpy.tensordot(dydt, d2bdy2, axes=0)
-                            ) + numpy.tensordot(d2bdy2 @ dydt + dbdy @ dfdy, out, axes=0) / (dot ** 2)
+                            dBdy = -1.0 / dot * (
+                                numpy.tensordot(dfdy.T, dbdy, axes=0)
+                                + numpy.tensordot(dydt, d2bdy2, axes=0)
+                            ) + numpy.tensordot(
+                                d2bdy2 @ dydt + dbdy @ dfdy, out, axes=0
+                            ) / (
+                                dot**2
+                            )
                             hes = (
-                                numpy.einsum('ijk, il, km -> ljm', dBdy, jac, jact)
-                                + B @ ( hest - numpy.tensordot(dbdy @ jact, dfdy @ jact, axes=0) / dot)
+                                numpy.einsum("ijk, il, km -> ljm", dBdy, jac, jact)
+                                + B
+                                @ (
+                                    hest
+                                    - numpy.tensordot(dbdy @ jact, dfdy @ jact, axes=0)
+                                    / dot
+                                )
                             ).T
                     i_border = i
 
         # Make a response instance
-        result = ModeStepResult[YF](sol.status, y1, tend=sol.t[-1], jac=jac, hes=hes, i_border=i_border)
-        if options.get('dense_output'):
+        result = ModeStepResult[YF](
+            sol.status, y1, tend=sol.t[-1], jac=jac, hes=hes, i_border=i_border
+        )
+        if options.get("dense_output"):
             result.sol = sol.sol
 
         return result
 
-class DiscreteMode (Mode[Y, YF]):
+
+class DiscreteMode(Mode[Y, YF]):
     """Mode of the discrete-time dynamical system
 
     Mode of the discrete-time dynamical system
@@ -585,14 +632,13 @@ class DiscreteMode (Mode[Y, YF]):
         Right-hand side of the discrete-time dynamical system. The calling signature is fun(y).
     """
 
-    def __init__(self,
-        name: str,
-        fun: Callable[[Y, P | None], YF]
-    ) -> None:
+    def __init__(self, name: str, fun: Callable[[Y, P | None], YF]) -> None:
         super().__init__(name, fun)
 
     @classmethod
-    def function(cls, domain_dimension: int, codomain_dimension: int, param_keys: list[str] = []) -> Callable:
+    def function(
+        cls, domain_dimension: int, codomain_dimension: int, param_keys: list[str] = []
+    ) -> Callable:
         """Decorator for ``fun`` in ``DiscreteTimeMode``
 
         Decorator for ``fun`` in ``DiscreteTimeMode``
@@ -609,23 +655,22 @@ class DiscreteMode (Mode[Y, YF]):
         Callable
             Decorated function compatible with ``DiscreteTimeMode``
         """
+
         def _decorator(fun: Callable[[Y, P], YF]) -> Callable[[Y, P], YF]:
             @wraps(fun)
             def _wrapper(y: Y, p: P) -> YF:
                 ret = fun(y, p)
                 return ret
-            setattr(_wrapper, 'dom_dim', domain_dimension)
-            setattr(_wrapper, 'cod_dim', codomain_dimension)
-            setattr(_wrapper, 'param_keys', param_keys)
+
+            setattr(_wrapper, "dom_dim", domain_dimension)
+            setattr(_wrapper, "cod_dim", codomain_dimension)
+            setattr(_wrapper, "param_keys", param_keys)
             return _wrapper
+
         return _decorator
 
-    def step(self,
-        y0: Y,
-        params: P | None = None,
-        calc_jac = True,
-        calc_hes = True,
-        **options
+    def step(
+        self, y0: Y, params: P | None = None, calc_jac=True, calc_hes=True, **options
     ) -> ModeStepResult[YF]:
         """Step to the next mode
 
@@ -659,7 +704,11 @@ class DiscreteMode (Mode[Y, YF]):
 
         # Convert functions into the general form
         if calc_jac:
-            params_arr = None if params is None or len(self.fun.param_keys) == 0 else numpy.array([params[k] for k in self.fun.param_keys])
+            params_arr = (
+                None
+                if params is None or len(self.fun.param_keys) == 0
+                else numpy.array([params[k] for k in self.fun.param_keys])
+            )
             if params_arr is None:
                 jac_fun = self.jac_fun
                 hes_fun = self.hes_fun
@@ -667,21 +716,22 @@ class DiscreteMode (Mode[Y, YF]):
                 jac_fun = lambda y: self.jac_fun(y, params_arr)
                 hes_fun = lambda y: self.hes_fun(y, params_arr)
             if calc_hes:
-                mapT = lambda n, y: numpy.hstack((
-                    self.fun(y, params),
-                    numpy.array(jac_fun(y)).flatten(order='F'),
-                    numpy.array(hes_fun(y)).flatten(order='F')
-                ))
+                mapT = lambda n, y: numpy.hstack(
+                    (
+                        self.fun(y, params),
+                        numpy.array(jac_fun(y)).flatten(order="F"),
+                        numpy.array(hes_fun(y)).flatten(order="F"),
+                    )
+                )
             else:
                 mapT = lambda n, y: numpy.append(
-                    self.fun(y, params),
-                    numpy.array(jac_fun(y)).flatten(order='F')
+                    self.fun(y, params), numpy.array(jac_fun(y)).flatten(order="F")
                 )
         else:
             mapT = lambda n, y: numpy.array(self.fun(y, params))
 
         ## Main part
-        sol  = mapT(0, y0in)
+        sol = mapT(0, y0in)
 
         cod_dim: int = self.fun.cod_dim
         dom_dim: int = self.fun.dom_dim
@@ -702,16 +752,17 @@ class DiscreteMode (Mode[Y, YF]):
 
         if calc_jac:
             af = cod_dim
-            at = af + (dom_dim*cod_dim)
-            jac = sol[af:at].reshape((cod_dim, dom_dim), order='F')
+            at = af + (dom_dim * cod_dim)
+            jac = sol[af:at].reshape((cod_dim, dom_dim), order="F")
         if calc_hes:
-            af = cod_dim+(dom_dim*cod_dim)
-            at = af + (dom_dim*cod_dim) * dom_dim
-            hes = sol[af:at].reshape((dom_dim, cod_dim, dom_dim), order='F')
+            af = cod_dim + (dom_dim * cod_dim)
+            at = af + (dom_dim * cod_dim) * dom_dim
+            hes = sol[af:at].reshape((dom_dim, cod_dim, dom_dim), order="F")
 
         result = ModeStepResult[YF](status=1, y=y1, jac=jac, hes=hes, i_border=i_border)
 
         return result
+
 
 class SolveIvbmpResult(BasicResult, Generic[Y]):
     """Result of ``solve_ivbmp``
@@ -733,7 +784,9 @@ class SolveIvbmpResult(BasicResult, Generic[Y]):
     hes : numpy.ndarray, float, or None, optional
         Hessian tensor of the map, by default ``None``.
     """
-    def __init__(self,
+
+    def __init__(
+        self,
         y: Y,
         trans_history: list[str],
         jac: numpy.ndarray | float | None = None,
@@ -748,15 +801,17 @@ class SolveIvbmpResult(BasicResult, Generic[Y]):
         self.eigvals = eigvals
         self.eigvecs = eigvecs
 
+
 class SomeJacUndefined(Exception):
-    """Exception that some of mode dose not enable Jacobian matrix calculation.
-    """
+    """Exception that some of mode dose not enable Jacobian matrix calculation."""
+
     def __str__(self) -> str:
         return "Some mode does not implement Jacobian matrix calculation."
 
+
 class SomeHesUndefined(Exception):
-    """Exception that some of mode dose not enable Hessian matrix calculation.
-    """
+    """Exception that some of mode dose not enable Hessian matrix calculation."""
+
     def __str__(self) -> str:
         return "Some mode does not implement Hessian tensor calculation."
 
@@ -771,7 +826,7 @@ def solve_ivbmp(
     calc_hes: bool = False,
     params: P | None = None,
     rtol=1e-6,
-    map_count=1
+    map_count=1,
 ) -> SolveIvbmpResult[numpy.ndarray] | SolveIvbmpResult[float]:
     """Solve the initial value and boundary modes problem of the hybrid dynamical system
 
@@ -807,19 +862,29 @@ def solve_ivbmp(
     """
 
     y0in, jac, eigs, eigv, hes, trans_history = _exec_calculation(
-        y0, map_count, calc_jac, calc_hes, rtol, trans, all_modes, initial_mode, end_mode, params
+        y0,
+        map_count,
+        calc_jac,
+        calc_hes,
+        rtol,
+        trans,
+        all_modes,
+        initial_mode,
+        end_mode,
+        params,
     )
 
     if isinstance(y0in, numpy.ndarray):
         if isinstance(eigs, float):
             raise TypeError
         return SolveIvbmpResult[numpy.ndarray](
-            y0in, trans_history, jac, eigs, eigv, hes)
+            y0in, trans_history, jac, eigs, eigv, hes
+        )
     else:
         if isinstance(eigs, numpy.ndarray):
             raise TypeError
-        return SolveIvbmpResult[float](
-            y0in, trans_history, jac, eigs, eigv, hes)
+        return SolveIvbmpResult[float](y0in, trans_history, jac, eigs, eigv, hes)
+
 
 class PoincareMap(Generic[Y]):
     """Construct Poincare map
@@ -839,13 +904,15 @@ class PoincareMap(Generic[Y]):
     calc_hes : bool, optional
         Flag to calculate Hessian matrix of the map, by default ``False``.
     """
-    def __init__(self,
+
+    def __init__(
+        self,
         all_modes: tuple[Mode, ...],
         trans: dict[str, str | list[str]],
         initial_mode: str,
         calc_jac: bool = False,
         calc_hes: bool = False,
-        **options
+        **options,
     ) -> None:
         self.all_modes = all_modes
         self.trans = trans
@@ -859,10 +926,8 @@ class PoincareMap(Generic[Y]):
         else:
             self.dimension = all_modes[all_modes_name.index(initial_mode)].fun.dom_dim
 
-    def image_detail(self,
-        y0: Y,
-        params: P | None,
-        iterations: int = 1
+    def image_detail(
+        self, y0: Y, params: P | None, iterations: int = 1
     ) -> SolveIvbmpResult[Y]:
         """Calculate image of the Poincare map with detailed information
 
@@ -879,17 +944,19 @@ class PoincareMap(Generic[Y]):
             Result of calculation.
         """
         slv = solve_poincare_map(
-            y0, self.all_modes, self.trans,
+            y0,
+            self.all_modes,
+            self.trans,
             self.initial_mode,
-            calc_jac=self.calc_jac, calc_hes=self.calc_hes,
-            params=params, map_count=iterations, **self.options)
+            calc_jac=self.calc_jac,
+            calc_hes=self.calc_hes,
+            params=params,
+            map_count=iterations,
+            **self.options,
+        )
         return slv
 
-    def image(self,
-        y0: Y,
-        params: P | None = None,
-        iterations: int = 1
-    ) -> Y:
+    def image(self, y0: Y, params: P | None = None, iterations: int = 1) -> Y:
         """Calculate image of the Poincare map
 
         Parameters
@@ -905,12 +972,18 @@ class PoincareMap(Generic[Y]):
             The image of y0 under the map.
         """
         slv = solve_poincare_map(
-            y0, self.all_modes, self.trans,
+            y0,
+            self.all_modes,
+            self.trans,
             self.initial_mode,
-            calc_jac=False, calc_hes=False,
-            params=params, map_count=iterations, **self.options
+            calc_jac=False,
+            calc_hes=False,
+            params=params,
+            map_count=iterations,
+            **self.options,
         )
         return slv.y
+
 
 def solve_poincare_map(
     y0: Y,
@@ -921,7 +994,7 @@ def solve_poincare_map(
     calc_hes: bool = False,
     params: P | None = None,
     rtol=1e-6,
-    map_count=1
+    map_count=1,
 ) -> SolveIvbmpResult[Y]:
     """Solve the initial value and boundary modes problem of the hybrid dynamical system
 
@@ -956,7 +1029,16 @@ def solve_poincare_map(
 
     """
     y0in, jac, eigs, eigv, hes, trans_history = _exec_calculation(
-        y0, map_count, calc_jac, calc_hes, rtol, trans, all_modes, initial_mode, initial_mode, params
+        y0,
+        map_count,
+        calc_jac,
+        calc_hes,
+        rtol,
+        trans,
+        all_modes,
+        initial_mode,
+        initial_mode,
+        params,
     )
 
     if isinstance(y0, numpy.ndarray) and y0.size == 1:
@@ -967,10 +1049,10 @@ def solve_poincare_map(
     if not is_type_of(eigs, type(y0)) and eigs is not None:
         raise TypeError(eigs, type(eigs), y0, type(y0))
 
-    return SolveIvbmpResult[Y](
-        y0in, trans_history, jac, eigs, eigv, hes)
+    return SolveIvbmpResult[Y](y0in, trans_history, jac, eigs, eigv, hes)
 
-def _exec_calculation (
+
+def _exec_calculation(
     y0: Y,
     map_count: int,
     calc_jac: bool,
@@ -1007,7 +1089,9 @@ def _exec_calculation (
 
     for _ in range(map_count):
         while 1:
-            result = current_mode.step(y0in, params=params, calc_jac=calc_jac, calc_hes=calc_hes, rtol=rtol)
+            result = current_mode.step(
+                y0in, params=params, calc_jac=calc_jac, calc_hes=calc_hes, rtol=rtol
+            )
             if result.status == 0:
                 raise NextModeNotFoundError
 
@@ -1023,7 +1107,13 @@ def _exec_calculation (
                     if calc_hes:
                         if result.hes is not None:
                             if hes is None:
-                                hes = numpy.zeros((current_mode.fun.dom_dim, current_mode.fun.dom_dim, current_mode.fun.dom_dim))
+                                hes = numpy.zeros(
+                                    (
+                                        current_mode.fun.dom_dim,
+                                        current_mode.fun.dom_dim,
+                                        current_mode.fun.dom_dim,
+                                    )
+                                )
 
                             hesn = result.hes
                             hes = (hesn @ jac).T @ jac + jacn @ hes
@@ -1060,7 +1150,7 @@ def _exec_calculation (
             eigs = jac
         else:
             jac = numpy.squeeze(jac)
-            try: # If Jac is square
+            try:  # If Jac is square
                 eigs, eigv = numpy.linalg.eig(jac)
             except:
                 pass
