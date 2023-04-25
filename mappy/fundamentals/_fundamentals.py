@@ -201,7 +201,7 @@ class ContinuousMode(Mode[Y, YF]):
         name: str,
         fun: Callable[[Y, P | None], YF],
         borders: list[Callable[[Y, P | None], float]],
-        max_interval: float = float(20),
+        max_interval: float = 20.0,
     ) -> None:
         super().__init__(name, fun)
         self.max_interval = max_interval
