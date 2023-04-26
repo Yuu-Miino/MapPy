@@ -1,6 +1,7 @@
 import numpy as np
 from mappy import ContinuousMode as CM, DiscreteMode as DM, PoincareMap
 from mappy.root import *
+from mappy.tools import plot2d
 
 
 ## Izhikevich neuron model
@@ -55,8 +56,25 @@ def main():
 
     transitions = {"m0": "m1", "m1": ["m2"], "m2": "m3", "m3": "m0"}
 
-    pmap = PoincareMap(all_modes, transitions, "m0", calc_jac=True, calc_hes=True)
-    print(pmap.image_detail(y0, param))
+    pmap = PoincareMap(all_modes, transitions, calc_jac=True, calc_hes=True)
+
+    f = lambda x, m, p: pmap.traj(x, m, params=p)
+    config = {
+        "xrange": (-80, 30),
+        "yrange": (-10, 2),
+        "param_keys": ["a", "I"],
+        "param_idx": 0,
+    }
+
+    plot2d(
+        f,
+        np.array([param["c"], y0]),
+        "m1",
+        param,
+        config=config,
+    )
+
+    """ print(pmap.image_detail(y0, "m0", params=param))
 
     res = trace_cycle(pmap, y0, param, "I", 4.5, show_progress=True)
 
@@ -72,7 +90,7 @@ def main():
         end_val=0.3,
         show_progress=True,
     )
-    print(len(ret))
+    print(len(ret)) """
 
 
 if __name__ == "__main__":

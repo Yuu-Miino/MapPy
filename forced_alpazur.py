@@ -2,6 +2,7 @@ import numpy as np
 from sympy import cos
 from mappy import ContinuousMode as CM, DiscreteMode as DM, PoincareMap
 from mappy.root import *
+from mappy.tools import plot2d
 
 
 @CM.function(3, ["k", "V0", "V", "omega", "g1", "B1"])
@@ -78,10 +79,10 @@ def main():
         "k": 0.1,
         "g1": 0.2,
         "g2": 2.0,
-        "B1": 8,
+        "B1": 1.3,
         "B2": 5,
         "V0": 0,
-        "V": 1,
+        "V": 2.4,
         "omega": 1.26,
     }
 
@@ -107,8 +108,21 @@ def main():
         "pinv2": "p2",
     }
 
-    pmap = PoincareMap(all_modes, trans, "p1", calc_jac=True, calc_hes=True)
-    print(pmap.image_detail(y0, param))
+    pmap = PoincareMap(
+        all_modes, trans, calc_jac=True, calc_hes=True, dense_output=True
+    )
+    f = lambda x, m, p: pmap.traj(x, m, ["p1", "p2"], p)
+
+    config = {
+        "xrange": (-10, 4),
+        "yrange": (-1.5, 4),
+        "param_keys": ["V", "B1"],
+        "param_idx": 1,
+    }
+
+    plot2d(f, y0, "p1", param, config)
+
+    """ print(pmap.image_detail(y0, param))
 
     ret = trace_cycle(
         poincare_map=pmap,
@@ -135,7 +149,7 @@ def main():
         resolution=100,
         show_progress=True,
     )
-    print(len(ret_lbf))
+    print(len(ret_lbf)) """
 
 
 if __name__ == "__main__":

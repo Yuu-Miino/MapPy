@@ -1,15 +1,25 @@
 """Fundamental classes and functions
 """
-from typing import Generic
+from typing import Generic, Literal
 from collections.abc import Callable
 from functools import wraps
 import numpy
-from scipy.integrate import solve_ivp, OdeSolution
+from scipy.integrate import solve_ivp
 
 numpy.set_printoptions(precision=12)
 import sympy
 from ._core import BasicResult
 from ..typing import is_type_of, Y, YF, YB, P
+
+
+class ModeSol:
+    def __init__(
+        self, m0: str, m1: str, mtype: Literal["C", "D"], sol: numpy.ndarray
+    ) -> None:
+        self.m0 = m0
+        self.m1 = m1
+        self.mtype = mtype
+        self.sol = sol
 
 
 class TransitionKeyError(Exception):
@@ -72,7 +82,7 @@ class ModeStepResult(BasicResult, Generic[Y]):
         jac: numpy.ndarray | float | None = None,
         hes: numpy.ndarray | float | None = None,
         i_border: int | None = None,
-        sol: OdeSolution | None = None,
+        sol: numpy.ndarray | None = None,
     ) -> None:
         self.status = status
         self.y = y
@@ -97,9 +107,12 @@ class Mode(Generic[Y, YF]):
 
     """
 
-    def __init__(self, name: str, fun: Callable[[Y, P | None], YF]) -> None:
+    def __init__(
+        self, name: str, fun: Callable[[Y, P | None], YF], mtype: Literal["C", "D"]
+    ) -> None:
         self.name = name
         self.fun = fun
+        self.mtype: Literal["C", "D"] = mtype
 
         # Jacobian for fun by SymPy
         x_symb = sympy.symbols(" ".join([f"x_{i}" for i in range(self.fun.dom_dim)]))
@@ -203,7 +216,7 @@ class ContinuousMode(Mode[Y, YF]):
         borders: list[Callable[[Y, P | None], float]],
         max_interval: float = 20.0,
     ) -> None:
-        super().__init__(name, fun)
+        super().__init__(name, fun, "C")
         self.max_interval = max_interval
         self.borders = borders
 
@@ -614,7 +627,8 @@ class ContinuousMode(Mode[Y, YF]):
             sol.status, y1, tend=sol.t[-1], jac=jac, hes=hes, i_border=i_border
         )
         if options.get("dense_output"):
-            result.sol = sol.sol(numpy.linspace(sol.t[0], sol.t[-1], 100))
+            step = max(int((sol.t[-1] - sol.t[0]) / 1e-2), 10)
+            result.sol = sol.sol(numpy.linspace(sol.t[0], sol.t[-1], step))
 
         return result
 
@@ -633,7 +647,7 @@ class DiscreteMode(Mode[Y, YF]):
     """
 
     def __init__(self, name: str, fun: Callable[[Y, P | None], YF]) -> None:
-        super().__init__(name, fun)
+        super().__init__(name, fun, "D")
 
     @classmethod
     def function(
@@ -761,6 +775,9 @@ class DiscreteMode(Mode[Y, YF]):
 
         result = ModeStepResult[YF](status=1, y=y1, jac=jac, hes=hes, i_border=i_border)
 
+        if options.get("dense_output"):
+            result.sol = numpy.array(y1)
+
         return result
 
 
@@ -793,6 +810,7 @@ class SolveIvbmpResult(BasicResult, Generic[Y]):
         eigvals: Y | None = None,
         eigvecs: numpy.ndarray | float | None = None,
         hes: numpy.ndarray | float | None = None,
+        sol: list[ModeSol] = [],
     ) -> None:
         self.y = y
         self.trans_history = trans_history
@@ -800,6 +818,7 @@ class SolveIvbmpResult(BasicResult, Generic[Y]):
         self.hes = hes
         self.eigvals = eigvals
         self.eigvecs = eigvecs
+        self.sol = sol
 
 
 class SomeJacUndefined(Exception):
@@ -821,12 +840,13 @@ def solve_ivbmp(
     all_modes: tuple[Mode, ...],
     trans: dict[str, str | list[str]],
     initial_mode: str,
-    end_mode: str | None = None,
+    end_mode: str | list[str] | None = None,
     calc_jac: bool = True,
     calc_hes: bool = False,
     params: P | None = None,
-    rtol=1e-6,
-    map_count=1,
+    rtol: float = 1e-6,
+    map_count: int = 1,
+    dense_output: bool = False,
 ) -> SolveIvbmpResult[numpy.ndarray] | SolveIvbmpResult[float]:
     """Solve the initial value and boundary modes problem of the hybrid dynamical system
 
@@ -861,7 +881,7 @@ def solve_ivbmp(
 
     """
 
-    y0in, jac, eigs, eigv, hes, trans_history = _exec_calculation(
+    y0in, jac, eigs, eigv, hes, trans_history, sol = _exec_calculation(
         y0,
         map_count,
         calc_jac,
@@ -872,18 +892,19 @@ def solve_ivbmp(
         initial_mode,
         end_mode,
         params,
+        dense_output,
     )
 
     if isinstance(y0in, numpy.ndarray):
         if isinstance(eigs, float):
             raise TypeError
         return SolveIvbmpResult[numpy.ndarray](
-            y0in, trans_history, jac, eigs, eigv, hes
+            y0in, trans_history, jac, eigs, eigv, hes, sol
         )
     else:
         if isinstance(eigs, numpy.ndarray):
             raise TypeError
-        return SolveIvbmpResult[float](y0in, trans_history, jac, eigs, eigv, hes)
+        return SolveIvbmpResult[float](y0in, trans_history, jac, eigs, eigv, hes, sol)
 
 
 class PoincareMap(Generic[Y]):
@@ -909,25 +930,23 @@ class PoincareMap(Generic[Y]):
         self,
         all_modes: tuple[Mode, ...],
         trans: dict[str, str | list[str]],
-        initial_mode: str,
         calc_jac: bool = False,
         calc_hes: bool = False,
         **options,
     ) -> None:
         self.all_modes = all_modes
         self.trans = trans
-        self.initial_mode = initial_mode
         self.calc_jac = calc_jac
         self.calc_hes = calc_hes
         self.options = options
-        all_modes_name = [m.name for m in all_modes]
-        if initial_mode not in all_modes_name:
-            raise AllModesKeyError(initial_mode)
-        else:
-            self.dimension = all_modes[all_modes_name.index(initial_mode)].fun.dom_dim
 
     def image_detail(
-        self, y0: Y, params: P | None, iterations: int = 1
+        self,
+        y0: Y,
+        m0: str,
+        m1: str | list[str] | None = None,
+        params: P | None = None,
+        iterations: int = 1,
     ) -> SolveIvbmpResult[Y]:
         """Calculate image of the Poincare map with detailed information
 
@@ -947,7 +966,8 @@ class PoincareMap(Generic[Y]):
             y0,
             self.all_modes,
             self.trans,
-            self.initial_mode,
+            m0,
+            m1,
             calc_jac=self.calc_jac,
             calc_hes=self.calc_hes,
             params=params,
@@ -956,7 +976,14 @@ class PoincareMap(Generic[Y]):
         )
         return slv
 
-    def image(self, y0: Y, params: P | None = None, iterations: int = 1) -> Y:
+    def image(
+        self,
+        y0: Y,
+        m0: str,
+        m1: str | list[str] | None = None,
+        params: P | None = None,
+        iterations: int = 1,
+    ) -> Y:
         """Calculate image of the Poincare map
 
         Parameters
@@ -975,7 +1002,8 @@ class PoincareMap(Generic[Y]):
             y0,
             self.all_modes,
             self.trans,
-            self.initial_mode,
+            m0,
+            m1,
             calc_jac=False,
             calc_hes=False,
             params=params,
@@ -984,17 +1012,41 @@ class PoincareMap(Generic[Y]):
         )
         return slv.y
 
+    def traj(
+        self,
+        y0: Y,
+        m0: str,
+        m1: str | list[str] | None = None,
+        params: P | None = None,
+        iterations: int = 1,
+    ) -> list[ModeSol]:
+        slv = solve_poincare_map(
+            y0,
+            self.all_modes,
+            self.trans,
+            m0,
+            m1,
+            calc_jac=False,
+            calc_hes=False,
+            params=params,
+            map_count=iterations,
+            **self.options,
+        )
+        return slv.sol
+
 
 def solve_poincare_map(
     y0: Y,
     all_modes: tuple[Mode, ...],
     trans: dict[str, str | list[str]],
     initial_mode: str,
+    end_mode: str | list[str] | None = None,
     calc_jac: bool = True,
     calc_hes: bool = False,
     params: P | None = None,
-    rtol=1e-6,
-    map_count=1,
+    rtol: float = 1e-6,
+    map_count: int = 1,
+    dense_output: bool = True,
 ) -> SolveIvbmpResult[Y]:
     """Solve the initial value and boundary modes problem of the hybrid dynamical system
 
@@ -1028,7 +1080,7 @@ def solve_poincare_map(
     SolveIvbmpResult
 
     """
-    y0in, jac, eigs, eigv, hes, trans_history = _exec_calculation(
+    y0in, jac, eigs, eigv, hes, trans_history, sol = _exec_calculation(
         y0,
         map_count,
         calc_jac,
@@ -1037,8 +1089,9 @@ def solve_poincare_map(
         trans,
         all_modes,
         initial_mode,
-        initial_mode,
+        end_mode,
         params,
+        dense_output,
     )
 
     if isinstance(y0, numpy.ndarray) and y0.size == 1:
@@ -1049,7 +1102,7 @@ def solve_poincare_map(
     if not is_type_of(eigs, type(y0)) and eigs is not None:
         raise TypeError(eigs, type(eigs), y0, type(y0))
 
-    return SolveIvbmpResult[Y](y0in, trans_history, jac, eigs, eigv, hes)
+    return SolveIvbmpResult[Y](y0in, trans_history, jac, eigs, eigv, hes, sol)
 
 
 def _exec_calculation(
@@ -1061,8 +1114,9 @@ def _exec_calculation(
     trans: dict[str, str | list[str]],
     all_modes: tuple[Mode, ...],
     initial_mode: str,
-    end_mode: str | None,
+    end_mode: str | list[str] | None,
     params: P | None,
+    dense_output: bool,
 ):
     mdi = [m.name for m in all_modes]
     trans_history: list[str] = []
@@ -1074,23 +1128,34 @@ def _exec_calculation(
     trans_history.append(initial_mode)
 
     if end_mode is None:
-        end_mode = initial_mode
+        end_mode = [initial_mode]
+    elif isinstance(end_mode, str):
+        end_mode = [end_mode]
     else:
+        pass
+
+    for em in end_mode:
         try:
-            _ = mdi.index(end_mode)
+            _ = mdi.index(em)
         except KeyError as e:
-            raise AllModesKeyError(end_mode)
+            raise AllModesKeyError(em) from e
 
     jac = None
     hes = None
     count = 0
 
     y0in = y0 if isinstance(y0, float) else y0.copy()
+    sol = []
 
     for _ in range(map_count):
         while 1:
             result = current_mode.step(
-                y0in, params=params, calc_jac=calc_jac, calc_hes=calc_hes, rtol=rtol
+                y0in,
+                params=params,
+                calc_jac=calc_jac,
+                calc_hes=calc_hes,
+                rtol=rtol,
+                dense_output=dense_output,
             )
             if result.status == 0:
                 raise NextModeNotFoundError
@@ -1132,6 +1197,11 @@ def _exec_calculation(
             except KeyError as e:
                 raise TransitionKeyError(current_mode.name) from e
 
+            if result.sol is not None:
+                sol.append(
+                    ModeSol(current_mode.name, next, current_mode.mtype, result.sol)
+                )
+
             try:
                 current_mode = all_modes[mdi.index(next)]
             except KeyError as e:
@@ -1139,7 +1209,7 @@ def _exec_calculation(
             trans_history.append(next)
 
             count += 1
-            if current_mode.name == end_mode:
+            if current_mode.name in end_mode:
                 break
 
     eigs = None
@@ -1160,4 +1230,4 @@ def _exec_calculation(
         else:
             hes = numpy.squeeze(hes)
 
-    return (y0in, jac, eigs, eigv, hes, trans_history)
+    return (y0in, jac, eigs, eigv, hes, trans_history, sol)
