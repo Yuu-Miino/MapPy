@@ -614,7 +614,7 @@ class ContinuousMode(Mode[Y, YF]):
             sol.status, y1, tend=sol.t[-1], jac=jac, hes=hes, i_border=i_border
         )
         if options.get("dense_output"):
-            result.sol = sol.sol
+            result.sol = sol.sol(numpy.linspace(sol.t[0], sol.t[-1], 100))
 
         return result
 
