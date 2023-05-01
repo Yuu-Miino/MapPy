@@ -2,7 +2,7 @@ import numpy as np
 from sympy import cos
 from mappy import ContinuousMode as CM, DiscreteMode as DM, PoincareMap
 from mappy.root import *
-from mappy.tools import plot2d
+from mappy.tools import plot2d, ModeColor
 
 
 @CM.function(3, ["k", "V0", "V", "omega", "g1", "B1"])
@@ -118,6 +118,14 @@ def main():
         "yrange": (-1.5, 4),
         "param_keys": ["V", "B1"],
         "param_idx": 1,
+        "traj_color": {
+            "alp_1": ModeColor("orange"),
+            "alp_2": ModeColor("teal"),
+        },
+        "point_color": {
+            "alp_1": ModeColor("orange"),
+            "alp_2": ModeColor("teal"),
+        },
     }
 
     plot2d(f, y0, "p1", param, config)

@@ -3,10 +3,16 @@ from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 from matplotlib.backend_bases import MouseEvent, KeyEvent
 
-from numpy import ndarray, concatenate
+from numpy import ndarray
 
 from ..typing import P
 from ..fundamentals import ModeSol
+
+
+class ModeColor:
+    def __init__(self, color: str = "black", alpha: float = 0.3):
+        self.color = color
+        self.alpha = alpha
 
 
 class Plot2dConfig:
@@ -19,17 +25,25 @@ class Plot2dConfig:
     xkey: int = 0
     ykey: int = 1
     linewidth: float = 1
-    pointsize: float = 3
-    alpha: float = 0.3
-    traj_color: str = "black"
-    point_color: str = "red"
-    mouse_point_color: str = "blue"
+    markersize: float = 3
     param_keys: list[str] = []  # For parameter control
     param_idx: int = 0  # For parameter control
     param_step: float = 1e-1  # For parameter control
     max_plots: int = 64
 
-    def __init__(self, **kwargs):
+    def __init__(
+        self,
+        traj_color: dict[str, ModeColor] = {},
+        point_color: dict[str, ModeColor] = {},
+        mouse_point_color: str = "blue",
+        mouse_point_alpha: float = 0.1,
+        **kwargs,
+    ):
+        self.traj_color = traj_color | {"_default": ModeColor()}
+        self.point_color = point_color | {"_default": ModeColor("red")}
+        self.mouse_point_color = mouse_point_color
+        self.mouse_point_alpha = mouse_point_alpha
+
         for k in kwargs:
             if hasattr(self, k):
                 setattr(self, k, kwargs[k])
@@ -60,22 +74,32 @@ def plot2d(
             _input[0][:] = sol[-1].sol[:, -1]
         _input[1] = sol[-1].m1
 
-        ax.plot(
-            concatenate([s.sol[cfg.xkey, :] for s in sol if s.mtype == "C"]),
-            concatenate([s.sol[cfg.ykey, :] for s in sol if s.mtype == "C"]),
-            "-",
-            color=cfg.traj_color,
-            linewidth=cfg.linewidth,
-            alpha=cfg.alpha,
-        )
+        for s in sol:
+            if s.mtype == "C":
+                if s.m0 not in cfg.traj_color:
+                    _lc = cfg.traj_color["_default"]
+                else:
+                    _lc = cfg.traj_color[s.m0]
+
+                ax.plot(
+                    s.sol[cfg.xkey, :],
+                    s.sol[cfg.ykey, :],
+                    "-",
+                    linewidth=cfg.linewidth,
+                    **_lc.__dict__,
+                )
+
+        if sol[-1].m0 not in cfg.point_color:
+            _pc = cfg.point_color["_default"]
+        else:
+            _pc = cfg.point_color[sol[-1].m0]
 
         ax.plot(
             _input[0][cfg.xkey],
             _input[0][cfg.ykey],
             "o",
-            color=cfg.point_color,
-            linewidth=cfg.pointsize,
-            alpha=cfg.alpha,
+            markersize=cfg.markersize,
+            **_pc.__dict__,
         )
 
     _ = FuncAnimation(fig, update, interval=1, repeat=False, cache_frame_data=False)
@@ -158,7 +182,8 @@ def _on_click(
         x0[cfg.ykey],
         "o",
         color=cfg.mouse_point_color,
-        markersize=cfg.pointsize,
+        alpha=cfg.mouse_point_alpha,
+        markersize=cfg.markersize,
     )
 
     print(x0)
