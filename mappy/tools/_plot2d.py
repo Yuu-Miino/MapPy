@@ -86,6 +86,16 @@ def plot2d(
                 if s.m0 in cfg.point_color:
                     _pc = cfg.point_color[s.m0]
 
+                if len(ax.lines) == 0:
+                    ax.plot(
+                        s.sol[cfg.xkey, 0],
+                        s.sol[cfg.ykey, 0],
+                        "o",
+                        markersize=cfg.markersize,
+                        color=cfg.mouse_point_color,
+                        alpha=cfg.mouse_point_alpha,
+                    )
+
                 ax.plot(
                     s.sol[cfg.xkey, :],
                     s.sol[cfg.ykey, :],
