@@ -36,7 +36,7 @@ class Plot2dConfig:
         traj_color: dict[str, ModeColor] = {},
         point_color: dict[str, ModeColor] = {},
         mouse_point_color: str = "blue",
-        mouse_point_alpha: float = 0.1,
+        mouse_point_alpha: float = 1,
         **kwargs,
     ):
         self.traj_color = traj_color | {"_default": ModeColor()}
@@ -74,12 +74,17 @@ def plot2d(
             _input[0][:] = sol[-1].sol[:, -1]
         _input[1] = sol[-1].m1
 
+        _pc = cfg.point_color["_default"]
+
         for s in sol:
             if s.mtype == "C":
                 if s.m0 not in cfg.traj_color:
                     _lc = cfg.traj_color["_default"]
                 else:
                     _lc = cfg.traj_color[s.m0]
+
+                if s.m0 in cfg.point_color:
+                    _pc = cfg.point_color[s.m0]
 
                 ax.plot(
                     s.sol[cfg.xkey, :],
@@ -88,11 +93,6 @@ def plot2d(
                     linewidth=cfg.linewidth,
                     **_lc.__dict__,
                 )
-
-        if sol[-1].m0 not in cfg.point_color:
-            _pc = cfg.point_color["_default"]
-        else:
-            _pc = cfg.point_color[sol[-1].m0]
 
         ax.plot(
             _input[0][cfg.xkey],
