@@ -12,6 +12,28 @@ from ._core import BasicResult
 from ..typing import is_type_of, Y, YF, YB, P
 
 
+def convert_y_ndarray(y: Y) -> numpy.ndarray:
+    if isinstance(y, (int, float)):
+        return numpy.array([y])
+    elif isinstance(y, (list, tuple)):
+        return numpy.array(y)
+    elif isinstance(y, numpy.ndarray):
+        return y
+    else:
+        raise TypeError(f"Type of y is not supported: {type(y)}")
+
+
+def revert_y_ndarray(y: numpy.ndarray, y0: Y) -> Y:
+    if isinstance(y0, (int, float)):
+        return y[0]
+    elif isinstance(y0, (list, tuple)):
+        return y.tolist()
+    elif isinstance(y0, numpy.ndarray):
+        return y
+    else:
+        raise TypeError(f"Type of y0 is not supported: {type(y0)}")
+
+
 class Traj:
     def __init__(self, sol: numpy.ndarray) -> None:
         self.sol = sol
