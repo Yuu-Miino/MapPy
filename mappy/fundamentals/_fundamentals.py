@@ -12,14 +12,26 @@ from ._core import BasicResult
 from ..typing import is_type_of, Y, YF, YB, P
 
 
-class ModeSol:
+class Traj:
+    def __init__(self, sol: numpy.ndarray) -> None:
+        self.sol = sol
+
+
+class ModeTraj(Traj):
     def __init__(
         self, m0: str, m1: str, mtype: Literal["C", "D"], sol: numpy.ndarray
     ) -> None:
         self.m0 = m0
         self.m1 = m1
         self.mtype = mtype
-        self.sol = sol
+        super().__init__(sol)
+
+
+class Sol:
+    def __init__(self, y0: Y, y1: Y, trajs: list[Traj]) -> None:
+        self.y0 = y0
+        self.y1 = y1
+        self.trajs = trajs
 
 
 class TransitionKeyError(Exception):
@@ -108,11 +120,16 @@ class Mode(Generic[Y, YF]):
     """
 
     def __init__(
-        self, name: str, fun: Callable[[Y, P | None], YF], mtype: Literal["C", "D"]
+        self,
+        name: str,
+        fun: Callable[[Y, P | None], YF],
+        mtype: Literal["C", "D"],
+        inTraj: bool = True,
     ) -> None:
         self.name = name
         self.fun = fun
         self.mtype: Literal["C", "D"] = mtype
+        self.inTraj = inTraj
 
         # Jacobian for fun by SymPy
         x_symb = sympy.symbols(" ".join([f"x_{i}" for i in range(self.fun.dom_dim)]))
@@ -187,6 +204,20 @@ class Mode(Generic[Y, YF]):
         return NotImplemented
 
 
+class ModeSol(Sol):
+    def __init__(
+        self,
+        y0: Y,
+        m0: str,
+        y1: Y,
+        m1: str,
+        trajs: list[Traj],
+    ) -> None:
+        self.m0 = m0
+        self.m1 = m1
+        super().__init__(y0, y1, trajs)
+
+
 class ContinuousMode(Mode[Y, YF]):
     """Mode for the continuos-time dynamical system
 
@@ -215,8 +246,9 @@ class ContinuousMode(Mode[Y, YF]):
         fun: Callable[[Y, P | None], YF],
         borders: list[Callable[[Y, P | None], float]],
         max_interval: float = 20.0,
+        inTraj: bool = True,
     ) -> None:
-        super().__init__(name, fun, "C")
+        super().__init__(name, fun, "C", inTraj)
         self.max_interval = max_interval
         self.borders = borders
 
@@ -626,7 +658,7 @@ class ContinuousMode(Mode[Y, YF]):
         result = ModeStepResult[YF](
             sol.status, y1, tend=sol.t[-1], jac=jac, hes=hes, i_border=i_border
         )
-        if options.get("dense_output"):
+        if options.get("dense_output") and self.inTraj:
             step = max(int((sol.t[-1] - sol.t[0]) / 1e-2), 10)
             result.sol = sol.sol(numpy.linspace(sol.t[0], sol.t[-1], step))
 
@@ -646,8 +678,10 @@ class DiscreteMode(Mode[Y, YF]):
         Right-hand side of the discrete-time dynamical system. The calling signature is fun(y).
     """
 
-    def __init__(self, name: str, fun: Callable[[Y, P | None], YF]) -> None:
-        super().__init__(name, fun, "D")
+    def __init__(
+        self, name: str, fun: Callable[[Y, P | None], YF], inTraj: bool = False
+    ) -> None:
+        super().__init__(name, fun, "D", inTraj)
 
     @classmethod
     def function(
@@ -775,8 +809,8 @@ class DiscreteMode(Mode[Y, YF]):
 
         result = ModeStepResult[YF](status=1, y=y1, jac=jac, hes=hes, i_border=i_border)
 
-        if options.get("dense_output"):
-            result.sol = numpy.array(y1)
+        if options.get("dense_output") and self.inTraj:
+            result.sol = numpy.vstack([y0in, y1]).T
 
         return result
 
@@ -810,7 +844,7 @@ class SolveIvbmpResult(BasicResult, Generic[Y]):
         eigvals: Y | None = None,
         eigvecs: numpy.ndarray | float | None = None,
         hes: numpy.ndarray | float | None = None,
-        sol: list[ModeSol] = [],
+        sol: ModeSol | None = None,
     ) -> None:
         self.y = y
         self.trans_history = trans_history
@@ -881,7 +915,7 @@ def solve_ivbmp(
 
     """
 
-    y0in, jac, eigs, eigv, hes, trans_history, sol = _exec_calculation(
+    y0in, jac, eigs, eigv, hes, trans_history, sol, m1 = _exec_calculation(
         y0,
         map_count,
         calc_jac,
@@ -895,16 +929,33 @@ def solve_ivbmp(
         dense_output,
     )
 
+    if not is_type_of(y0in, type(y0)):
+        raise TypeError(y0in, type(y0in), y0, type(y0))
+
     if isinstance(y0in, numpy.ndarray):
         if isinstance(eigs, float):
             raise TypeError
         return SolveIvbmpResult[numpy.ndarray](
-            y0in, trans_history, jac, eigs, eigv, hes, sol
+            y0in,
+            trans_history,
+            jac,
+            eigs,
+            eigv,
+            hes,
+            ModeSol(y0, initial_mode, y0in, m1, sol),
         )
     else:
         if isinstance(eigs, numpy.ndarray):
             raise TypeError
-        return SolveIvbmpResult[float](y0in, trans_history, jac, eigs, eigv, hes, sol)
+        return SolveIvbmpResult[float](
+            y0in,
+            trans_history,
+            jac,
+            eigs,
+            eigv,
+            hes,
+            ModeSol(y0, initial_mode, y0in, m1, sol),
+        )
 
 
 class PoincareMap(Generic[Y]):
@@ -1019,7 +1070,7 @@ class PoincareMap(Generic[Y]):
         m1: str | list[str] | None = None,
         params: P | None = None,
         iterations: int = 1,
-    ) -> list[ModeSol]:
+    ) -> ModeSol | None:
         slv = solve_poincare_map(
             y0,
             self.all_modes,
@@ -1080,7 +1131,7 @@ def solve_poincare_map(
     SolveIvbmpResult
 
     """
-    y0in, jac, eigs, eigv, hes, trans_history, sol = _exec_calculation(
+    y0in, jac, eigs, eigv, hes, trans_history, sol, m1 = _exec_calculation(
         y0,
         map_count,
         calc_jac,
@@ -1102,7 +1153,15 @@ def solve_poincare_map(
     if not is_type_of(eigs, type(y0)) and eigs is not None:
         raise TypeError(eigs, type(eigs), y0, type(y0))
 
-    return SolveIvbmpResult[Y](y0in, trans_history, jac, eigs, eigv, hes, sol)
+    return SolveIvbmpResult[Y](
+        y0in,
+        trans_history,
+        jac,
+        eigs,
+        eigv,
+        hes,
+        ModeSol(y0, initial_mode, y0in, m1, sol),
+    )
 
 
 def _exec_calculation(
@@ -1197,9 +1256,9 @@ def _exec_calculation(
             except KeyError as e:
                 raise TransitionKeyError(current_mode.name) from e
 
-            if result.sol is not None:
+            if result.sol is not None and current_mode.inTraj:
                 sol.append(
-                    ModeSol(current_mode.name, next, current_mode.mtype, result.sol)
+                    ModeTraj(current_mode.name, next, current_mode.mtype, result.sol)
                 )
 
             try:
@@ -1230,4 +1289,4 @@ def _exec_calculation(
         else:
             hes = numpy.squeeze(hes)
 
-    return (y0in, jac, eigs, eigv, hes, trans_history, sol)
+    return (y0in, jac, eigs, eigv, hes, trans_history, sol, current_mode.name)
