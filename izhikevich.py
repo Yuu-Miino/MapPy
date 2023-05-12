@@ -1,7 +1,7 @@
 import numpy as np
 from mappy import ContinuousMode as CM, DiscreteMode as DM, PoincareMap
 from mappy.root import *
-from mappy.tools import plot2d
+from mappy.tools import plot2d, Plot2dConfig, ModeColor
 
 
 ## Izhikevich neuron model
@@ -44,13 +44,13 @@ def pinv(y, _):
 
 ## Main
 def main():
-    y0 = -1.71591635
+    y0 = -3.0
     param = {"a": 0.2, "b": 0.2, "c": -50.0, "d": 2.0, "I": 10.0}
 
     all_modes = (
         DM("m0", p),
         CM("m1", izhikevich, borders=[fire_border]),
-        DM("m2", jump),
+        DM("m2", jump, inTraj=True),
         DM("m3", pinv),
     )
 
@@ -58,18 +58,24 @@ def main():
 
     pmap = PoincareMap(all_modes, transitions, calc_jac=True, calc_hes=True)
 
-    f = lambda x, m, p: pmap.traj(x, m, params=p)
-    config = {
-        "xrange": (-80, 30),
-        "yrange": (-10, 2),
-        "param_keys": ["a", "I"],
-        "param_idx": 0,
-    }
+    f = lambda x, m, p: pmap.traj(x, m, "m0", params=p)
+
+    config = Plot2dConfig(
+        xrange=(-80, 35),
+        yrange=(-10, 2),
+        param_keys=["a", "I"],
+        param_idx=0,
+        float_mouse_xy="y",
+        traj_color={
+            "m1": ModeColor("teal"),
+            "m2": ModeColor("orange"),
+        },
+    )
 
     plot2d(
         f,
-        np.array([param["c"], y0]),
-        "m1",
+        y0,
+        "m0",
         param,
         config=config,
     )
