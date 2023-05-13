@@ -3,10 +3,10 @@ from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 from matplotlib.backend_bases import MouseEvent, KeyEvent
 
-from numpy import ndarray, array
+from numpy import ndarray
 
 from ..typing import Y, P
-from ..fundamentals import Sol, ModeSol, ModeTraj
+from ..fundamentals import Sol, ModeSol, ModeTraj, convert_y_ndarray
 
 
 class ModeColor:
@@ -82,7 +82,7 @@ def plot2d(
     from matplotlib import pyplot
 
     # Matplotlib initialization
-    _input = [y0.copy() if isinstance(y0, ndarray) else array(y0), m0, params.copy()]
+    _input = [convert_y_ndarray(y0), m0, params.copy()]
     fig, ax, cfg, status = init_plot2d(_input[0], _input[2], config)
 
     def update(_: int):
@@ -94,10 +94,7 @@ def plot2d(
             raise TypeError("Invalid solution type: float")
 
         if not status.clicked:
-            if sol.y1.ndim == 0:
-                _input[0].fill(sol.y1)
-            else:
-                _input[0][:] = sol.y1
+            _input[0][:] = sol.y1
             if isinstance(sol, ModeSol):
                 _input[1] = sol.m1
 
@@ -212,11 +209,11 @@ def _on_click(
     if event.xdata == None or event.ydata == None:
         return
 
-    if x0.ndim == 0:
+    if x0.size == 1:
         if cfg.float_mouse_xy == "x":
-            x0.fill(event.xdata)
+            x0[0] = event.xdata
         else:
-            x0.fill(event.ydata)
+            x0[0] = event.ydata
     else:
         x0[cfg.xkey] = event.xdata
         x0[cfg.ykey] = event.ydata

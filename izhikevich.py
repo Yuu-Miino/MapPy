@@ -44,7 +44,7 @@ def pinv(y, _):
 
 ## Main
 def main():
-    y0 = -3.0
+    y0 = -3
     param = {"a": 0.2, "b": 0.2, "c": -50.0, "d": 2.0, "I": 10.0}
 
     all_modes = (

@@ -9,7 +9,32 @@ from scipy.integrate import solve_ivp
 numpy.set_printoptions(precision=12)
 import sympy
 from ._core import BasicResult
-from ..typing import is_type_of, Y, YF, YB, P
+from ..typing import Y, YF, YB, P
+
+
+def convert_y_ndarray(y: Y) -> numpy.ndarray:
+    if isinstance(y, (int, float)):
+        return numpy.array([y], dtype=numpy.floating)
+    elif isinstance(y, (list, tuple)):
+        return numpy.array(y, dtype=numpy.floating)
+    elif isinstance(y, numpy.ndarray):
+        if y.ndim == 0:
+            return numpy.array([y], dtype=numpy.floating)
+        else:
+            return y.copy()
+    else:
+        raise TypeError(f"Type of y is not supported: {type(y)}")
+
+
+def revert_y_ndarray(y: numpy.ndarray, y0: Y) -> Y:
+    if isinstance(y0, (int, float)):
+        return y[0].item()
+    elif isinstance(y0, (list, tuple)):
+        return y.tolist()
+    elif isinstance(y0, numpy.ndarray):
+        return y.copy()
+    else:
+        raise TypeError(f"Type of y0 is not supported: {type(y0)}")
 
 
 class Traj:
@@ -573,22 +598,19 @@ class ContinuousMode(Mode[Y, YF]):
         dim = self.fun.dom_dim
 
         # Copy initial value
-        if isinstance(y0, numpy.ndarray):
-            y0in = y0.copy()
-        else:
-            y0in = y0
+        _y0 = convert_y_ndarray(y0)
 
         # Append an identity matrix to the initial state if calculate Jacobian matrix
         if calc_jac:
-            y0in = numpy.append(y0in, numpy.eye(dim).flatten())
+            _y0 = numpy.append(_y0, numpy.eye(dim).flatten())
         if calc_hes:
-            y0in = numpy.append(y0in, numpy.zeros(dim**2 * (dim + 1) // 2))
+            _y0 = numpy.append(_y0, numpy.zeros(dim**2 * (dim + 1) // 2))
 
         ## Main loop: solve initial value problem
-        sol = solve_ivp(ode, [0, self.max_interval], y0in, events=borders, **options)
+        sol = solve_ivp(ode, [0, self.max_interval], _y0, events=borders, **options)
 
         ## Set values to the result instance
-        y1: YF = sol.y.T[-1][0:dim] if dim != 1 else sol.y.T[-1][0]
+        _y1: YF = sol.y.T[-1][0:dim]
 
         if calc_jac:  # If calculate Jacobian matrix
             jact = numpy.array(sol.y.T[-1][dim : dim + (dim**2)]).reshape(
@@ -624,16 +646,16 @@ class ContinuousMode(Mode[Y, YF]):
                         and devs is not None
                         and d2evs is not None
                     ):
-                        dydt = numpy.array(ode_fun(0, y1), dtype=numpy.float64)
-                        dbdy = numpy.array(devs[i](0, y1), dtype=numpy.float64)
-                        dot: numpy.float64 = numpy.dot(dbdy, dydt)
+                        dydt = numpy.array(ode_fun(0, _y1), dtype=numpy.floating)
+                        dbdy = numpy.array(devs[i](0, _y1), dtype=numpy.floating)
+                        dot: numpy.floating = numpy.dot(dbdy, dydt)
                         out = numpy.outer(dydt, dbdy)
                         B = numpy.eye(dim) - out / dot
                         jac = B @ jact
 
                         if hest is not None:
-                            dfdy = numpy.array(jac_fun(0, y1))
-                            d2bdy2 = numpy.array(d2evs[i](0, y1))
+                            dfdy = numpy.array(jac_fun(0, _y1))
+                            d2bdy2 = numpy.array(d2evs[i](0, _y1))
 
                             dBdy = -1.0 / dot * (
                                 numpy.tensordot(dfdy.T, dbdy, axes=0)
@@ -656,7 +678,7 @@ class ContinuousMode(Mode[Y, YF]):
 
         # Make a response instance
         result = ModeStepResult[YF](
-            sol.status, y1, tend=sol.t[-1], jac=jac, hes=hes, i_border=i_border
+            sol.status, _y1, tend=sol.t[-1], jac=jac, hes=hes, i_border=i_border
         )
         if options.get("dense_output") and self.inTraj:
             step = max(int((sol.t[-1] - sol.t[0]) / 1e-2), 10)
@@ -744,7 +766,7 @@ class DiscreteMode(Mode[Y, YF]):
 
         """
         ## Setup
-        y0in = y0 if isinstance(y0, float) else y0.copy()
+        _y0 = convert_y_ndarray(y0)
         i_border: int | None = None
         jac = None
         hes = None
@@ -778,39 +800,29 @@ class DiscreteMode(Mode[Y, YF]):
         else:
             mapT = lambda n, y: numpy.array(self.fun(y, params))
 
-        ## Main part
-        sol = mapT(0, y0in)
+        ## Calc y1
+        y1 = self.fun(y0, params)
 
-        cod_dim: int = self.fun.cod_dim
-        dom_dim: int = self.fun.dom_dim
-        y1 = self.fun(y0in, params)
-        if not isinstance(y1, numpy.ndarray):
-            y1 = float(y1)
+        ## Calc derivatives
+        if calc_jac or calc_hes:
+            sol = mapT(0, _y0)
 
-        if isinstance(sol, float) or sol.size == 1:
-            tmp = float(sol)
-        elif cod_dim == 1:
-            tmp = sol[0]
-        else:
-            tmp = sol[0:cod_dim]
+            cod_dim: int = self.fun.cod_dim
+            dom_dim: int = self.fun.dom_dim
 
-        if not is_type_of(tmp, type(y1)):
-            raise TypeError((type(tmp), type(y1)))
-        y1 = tmp
-
-        if calc_jac:
-            af = cod_dim
-            at = af + (dom_dim * cod_dim)
-            jac = sol[af:at].reshape((cod_dim, dom_dim), order="F")
-        if calc_hes:
-            af = cod_dim + (dom_dim * cod_dim)
-            at = af + (dom_dim * cod_dim) * dom_dim
-            hes = sol[af:at].reshape((dom_dim, cod_dim, dom_dim), order="F")
+            if calc_jac:
+                af = cod_dim
+                at = af + (dom_dim * cod_dim)
+                jac = sol[af:at].reshape((cod_dim, dom_dim), order="F")
+            if calc_hes:
+                af = cod_dim + (dom_dim * cod_dim)
+                at = af + (dom_dim * cod_dim) * dom_dim
+                hes = sol[af:at].reshape((dom_dim, cod_dim, dom_dim), order="F")
 
         result = ModeStepResult[YF](status=1, y=y1, jac=jac, hes=hes, i_border=i_border)
 
         if options.get("dense_output") and self.inTraj:
-            result.sol = numpy.vstack([y0in, y1]).T
+            result.sol = numpy.vstack([_y0, convert_y_ndarray(y1)]).T
 
         return result
 
@@ -873,7 +885,7 @@ def solve_ivbmp(
     y0: Y,
     all_modes: tuple[Mode, ...],
     trans: dict[str, str | list[str]],
-    initial_mode: str,
+    m0: str,
     end_mode: str | list[str] | None = None,
     calc_jac: bool = True,
     calc_hes: bool = False,
@@ -881,7 +893,7 @@ def solve_ivbmp(
     rtol: float = 1e-6,
     map_count: int = 1,
     dense_output: bool = False,
-) -> SolveIvbmpResult[numpy.ndarray] | SolveIvbmpResult[float]:
+) -> SolveIvbmpResult[Y]:
     """Solve the initial value and boundary modes problem of the hybrid dynamical system
 
     Solve the initial value and boundary modes problem of the hybrid dynamical system
@@ -915,47 +927,34 @@ def solve_ivbmp(
 
     """
 
-    y0in, jac, eigs, eigv, hes, trans_history, sol, m1 = _exec_calculation(
-        y0,
+    _y0 = convert_y_ndarray(y0)
+
+    _y1, jac, _eigs, eigv, hes, trans_history, sol, m1 = _exec_calculation(
+        _y0,
         map_count,
         calc_jac,
         calc_hes,
         rtol,
         trans,
         all_modes,
-        initial_mode,
+        m0,
         end_mode,
         params,
         dense_output,
     )
 
-    if not is_type_of(y0in, type(y0)):
-        raise TypeError(y0in, type(y0in), y0, type(y0))
+    y1 = revert_y_ndarray(_y1, y0)
+    eigs = None if _eigs is None else revert_y_ndarray(_eigs, y0)
 
-    if isinstance(y0in, numpy.ndarray):
-        if isinstance(eigs, float):
-            raise TypeError
-        return SolveIvbmpResult[numpy.ndarray](
-            y0in,
-            trans_history,
-            jac,
-            eigs,
-            eigv,
-            hes,
-            ModeSol(y0, initial_mode, y0in, m1, sol),
-        )
-    else:
-        if isinstance(eigs, numpy.ndarray):
-            raise TypeError
-        return SolveIvbmpResult[float](
-            y0in,
-            trans_history,
-            jac,
-            eigs,
-            eigv,
-            hes,
-            ModeSol(y0, initial_mode, y0in, m1, sol),
-        )
+    return SolveIvbmpResult(
+        y1,
+        trans_history,
+        jac,
+        eigs,
+        eigv,
+        hes,
+        None if len(sol) == 0 else ModeSol(_y0, m0, _y1, m1, sol),
+    )
 
 
 class PoincareMap(Generic[Y]):
@@ -1090,7 +1089,7 @@ def solve_poincare_map(
     y0: Y,
     all_modes: tuple[Mode, ...],
     trans: dict[str, str | list[str]],
-    initial_mode: str,
+    m0: str,
     end_mode: str | list[str] | None = None,
     calc_jac: bool = True,
     calc_hes: bool = False,
@@ -1131,41 +1130,39 @@ def solve_poincare_map(
     SolveIvbmpResult
 
     """
-    y0in, jac, eigs, eigv, hes, trans_history, sol, m1 = _exec_calculation(
-        y0,
+    _y0 = convert_y_ndarray(y0)
+
+    _y1, jac, _eigs, eigv, hes, trans_history, sol, m1 = _exec_calculation(
+        _y0,
         map_count,
         calc_jac,
         calc_hes,
         rtol,
         trans,
         all_modes,
-        initial_mode,
+        m0,
         end_mode,
         params,
         dense_output,
     )
 
-    if isinstance(y0, numpy.ndarray) and y0.size == 1:
-        y0in = numpy.array(y0in)
-        eigs = numpy.array(eigs)
-    if not is_type_of(y0in, type(y0)):
-        raise TypeError(y0in, type(y0in), y0, type(y0))
-    if not is_type_of(eigs, type(y0)) and eigs is not None:
-        raise TypeError(eigs, type(eigs), y0, type(y0))
+    y1 = revert_y_ndarray(_y1, y0)
+
+    eigs = None if _eigs is None else revert_y_ndarray(_eigs, y0)
 
     return SolveIvbmpResult[Y](
-        y0in,
+        y1,
         trans_history,
         jac,
         eigs,
         eigv,
         hes,
-        ModeSol(y0, initial_mode, y0in, m1, sol),
+        None if len(sol) == 0 else ModeSol(_y0, m0, _y1, m1, sol),
     )
 
 
 def _exec_calculation(
-    y0: Y,
+    y0: numpy.ndarray,
     map_count: int,
     calc_jac: bool,
     calc_hes: bool,
@@ -1203,13 +1200,13 @@ def _exec_calculation(
     hes = None
     count = 0
 
-    y0in = y0 if isinstance(y0, float) else y0.copy()
+    _y0 = y0.copy()
     sol = []
 
     for _ in range(map_count):
         while 1:
             result = current_mode.step(
-                y0in,
+                _y0,
                 params=params,
                 calc_jac=calc_jac,
                 calc_hes=calc_hes,
@@ -1219,9 +1216,7 @@ def _exec_calculation(
             if result.status == 0:
                 raise NextModeNotFoundError
 
-            y0in = result.y
-            if not isinstance(y0in, numpy.ndarray) or y0in.size == 1:
-                y0in = float(y0in)
+            _y0 = convert_y_ndarray(result.y)
 
             if calc_jac:
                 if result.jac is not None:
@@ -1232,11 +1227,7 @@ def _exec_calculation(
                         if result.hes is not None:
                             if hes is None:
                                 hes = numpy.zeros(
-                                    (
-                                        current_mode.fun.dom_dim,
-                                        current_mode.fun.dom_dim,
-                                        current_mode.fun.dom_dim,
-                                    )
+                                    ([current_mode.fun.dom_dim] * 3),
                                 )
 
                             hesn = result.hes
@@ -1273,9 +1264,10 @@ def _exec_calculation(
 
     eigs = None
     eigv = None
+
     if jac is not None:
         if jac.size == 1:
-            jac = float(jac)
+            jac = convert_y_ndarray(float(jac))
             eigs = jac
         else:
             jac = numpy.squeeze(jac)
@@ -1283,10 +1275,11 @@ def _exec_calculation(
                 eigs, eigv = numpy.linalg.eig(jac)
             except:
                 pass
+
     if hes is not None:
-        if isinstance(hes, float) or hes.size == 1:
-            hes = float(hes)
+        if hes.size == 1:
+            hes = convert_y_ndarray(float(hes))
         else:
             hes = numpy.squeeze(hes)
 
-    return (y0in, jac, eigs, eigv, hes, trans_history, sol, current_mode.name)
+    return (_y0, jac, eigs, eigv, hes, trans_history, sol, current_mode.name)

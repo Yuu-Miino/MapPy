@@ -1,9 +1,11 @@
 from typing import Any, Type, TypeVar, TypeGuard, TypeAlias
 from numpy import ndarray
 
-Y = TypeVar("Y", ndarray, float)
-YF = TypeVar("YF", ndarray, float)
-YB = TypeVar("YB", bound=float)
+Y = TypeVar("Y", ndarray, float, int, list[float], tuple[float], list[int], tuple[int])
+YF = TypeVar(
+    "YF", ndarray, float, int, list[float], tuple[float], list[int], tuple[int]
+)
+YB = TypeVar("YB", float, int)
 YC = TypeVar("YC", ndarray, float, tuple)
 P: TypeAlias = dict[str, Any]
 
