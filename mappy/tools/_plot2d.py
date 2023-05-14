@@ -83,7 +83,7 @@ def plot2d(
 
     # Matplotlib initialization
     _input = [convert_y_ndarray(y0), m0, params.copy()]
-    fig, ax, cfg, status = init_plot2d(_input[0], _input[2], config)
+    fig, ax, status = init_plot2d(_input[0], _input[2], config)
 
     def update(_: int):
         sol = solver(*_input)
@@ -99,42 +99,42 @@ def plot2d(
                 _input[1] = sol.m1
 
         if len(sol.trajs) > 0:
-            _pc = cfg.point_color["_default"]
+            _pc = config.point_color["_default"]
 
             for s in sol.trajs:
-                _lc = cfg.traj_color["_default"]
+                _lc = config.traj_color["_default"]
                 if isinstance(s, ModeTraj):
-                    if s.m0 in cfg.traj_color:
-                        _lc = cfg.traj_color[s.m0]
+                    if s.m0 in config.traj_color:
+                        _lc = config.traj_color[s.m0]
 
-                    if s.m0 in cfg.point_color:
-                        _pc = cfg.point_color[s.m0]
+                    if s.m0 in config.point_color:
+                        _pc = config.point_color[s.m0]
 
                 if len(ax.lines) == 0 or status.clicked:
                     ax.plot(
-                        s.sol[cfg.xkey, 0],
-                        s.sol[cfg.ykey, 0],
+                        s.sol[config.xkey, 0],
+                        s.sol[config.ykey, 0],
                         "o",
-                        markersize=cfg.markersize,
-                        color=cfg.mouse_point_color,
-                        alpha=cfg.mouse_point_alpha,
+                        markersize=config.markersize,
+                        color=config.mouse_point_color,
+                        alpha=config.mouse_point_alpha,
                     )
                     status.clicked = False
 
-                if not cfg.only_map:
+                if not config.only_map:
                     ax.plot(
-                        s.sol[cfg.xkey, :],
-                        s.sol[cfg.ykey, :],
+                        s.sol[config.xkey, :],
+                        s.sol[config.ykey, :],
                         "-",
-                        linewidth=cfg.linewidth,
+                        linewidth=config.linewidth,
                         **_lc.__dict__,
                     )
 
             ax.plot(
-                sol.trajs[-1].sol[cfg.xkey, -1],
-                sol.trajs[-1].sol[cfg.ykey, -1],
-                "o",
-                markersize=cfg.markersize,
+                sol.trajs[-1].sol[config.xkey, -1],
+                sol.trajs[-1].sol[config.ykey, -1],
+                ".",
+                markersize=config.markersize,
                 **_pc.__dict__,
             )
 
@@ -147,7 +147,7 @@ def init_plot2d(
     y0: ndarray,
     params: P,
     cfg: Plot2dConfig,
-) -> tuple[Figure, Axes, Plot2dConfig, PlotStatus]:
+) -> tuple[Figure, Axes, PlotStatus]:
     from matplotlib import pyplot as plt, rcParams
 
     status = PlotStatus()
@@ -169,7 +169,7 @@ def init_plot2d(
     )
     draw_axes2d(ax, cfg)
 
-    return (fig, ax, cfg, status)
+    return (fig, ax, status)
 
 
 def draw_axes2d(ax: Axes, config: Plot2dConfig):

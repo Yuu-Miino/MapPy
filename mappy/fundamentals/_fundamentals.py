@@ -979,7 +979,7 @@ class PoincareMap(Generic[Y]):
     def __init__(
         self,
         all_modes: tuple[Mode, ...],
-        trans: dict[str, str | list[str]],
+        trans: dict[str, str | list[str]] | dict[str, str] | dict[str, list[str]],
         calc_jac: bool = False,
         calc_hes: bool = False,
         **options,
@@ -1088,7 +1088,7 @@ class PoincareMap(Generic[Y]):
 def solve_poincare_map(
     y0: Y,
     all_modes: tuple[Mode, ...],
-    trans: dict[str, str | list[str]],
+    trans: dict[str, str | list[str]] | dict[str, str] | dict[str, list[str]],
     m0: str,
     end_mode: str | list[str] | None = None,
     calc_jac: bool = True,
@@ -1167,7 +1167,7 @@ def _exec_calculation(
     calc_jac: bool,
     calc_hes: bool,
     rtol: float,
-    trans: dict[str, str | list[str]],
+    trans: dict[str, str | list[str]] | dict[str, str] | dict[str, list[str]],
     all_modes: tuple[Mode, ...],
     initial_mode: str,
     end_mode: str | list[str] | None,
