@@ -40,8 +40,8 @@ class Plot2dConfig:
         param_step: float = 1e-1,  # For parameter control
         max_plots: int = 64,
         float_mouse_xy: Literal["x", "y"] = "x",
-        traj_color: dict[str, ColorAlpha] = {},
-        point_color: dict[str, ColorAlpha] = {},
+        traj_color: ColorAlpha | dict[str, ColorAlpha] = {},
+        point_color: ColorAlpha | dict[str, ColorAlpha] = {},
         mouse_point_color: str = "blue",
         mouse_point_alpha: float = 1,
     ):
@@ -60,8 +60,14 @@ class Plot2dConfig:
         self.param_step = param_step
         self.max_plots = max_plots
         self.float_mouse_xy = float_mouse_xy
-        self.traj_color = traj_color | {"_default": ColorAlpha()}
-        self.point_color = point_color | {"_default": ColorAlpha("red")}
+        if isinstance(traj_color, ColorAlpha):
+            self.traj_color = {"_default": traj_color}
+        else:
+            self.traj_color = traj_color | {"_default": ColorAlpha()}
+        if isinstance(point_color, ColorAlpha):
+            self.point_color = {"_default": point_color}
+        else:
+            self.point_color = point_color | {"_default": ColorAlpha("red")}
         self.mouse_point_color = mouse_point_color
         self.mouse_point_alpha = mouse_point_alpha
 

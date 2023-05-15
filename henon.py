@@ -23,7 +23,8 @@ if __name__ == "__main__":
         yrange=(-0.5, 0.5),
         param_keys=["a", "b"],
         param_idx=0,
-        traj_color={"henon": ColorAlpha("orange")},
+        traj_color=ColorAlpha("orange"),
+        point_color=ColorAlpha("teal"),
         only_map=True,
     )
 

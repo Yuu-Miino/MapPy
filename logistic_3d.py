@@ -30,7 +30,8 @@ if __name__ == "__main__":
         yrange=(0, 1.2),
         param_keys=["alpha", "beta", "gamma"],
         param_idx=0,
-        traj_color={"logistic_3d": ColorAlpha("orange")},
+        traj_color=ColorAlpha("orange"),
+        point_color=ColorAlpha("teal"),
         only_map=True,
     )
 

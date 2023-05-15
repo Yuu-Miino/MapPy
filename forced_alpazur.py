@@ -115,6 +115,8 @@ def main():
     config = Plot2dConfig(
         xrange=(-10, 4),
         yrange=(-1.5, 4),
+        xlabel="v1",
+        ylabel="v2",
         param_keys=["V", "B1"],
         param_idx=1,
         traj_color={

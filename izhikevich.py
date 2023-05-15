@@ -61,6 +61,8 @@ def main():
     config = Plot2dConfig(
         xrange=(-80, 35),
         yrange=(-10, 2),
+        xlabel="v",
+        ylabel="u",
         param_keys=["a", "I"],
         param_idx=0,
         float_mouse_xy="y",
