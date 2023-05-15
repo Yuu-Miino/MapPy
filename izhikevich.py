@@ -1,7 +1,7 @@
 import numpy as np
 from mappy import ContinuousMode as CM, DiscreteMode as DM, PoincareMap
 from mappy.root import *
-from mappy.tools import mplot2d, Plot2dConfig, ModeColor
+from mappy.tools import mplot2d, Plot2dConfig, ColorAlpha
 
 
 ## Izhikevich neuron model
@@ -65,8 +65,8 @@ def main():
         param_idx=0,
         float_mouse_xy="y",
         traj_color={
-            "m1": ModeColor("teal"),
-            "m2": ModeColor("orange"),
+            "m1": ColorAlpha("teal"),
+            "m2": ColorAlpha("orange"),
         },
     )
 

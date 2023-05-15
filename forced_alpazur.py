@@ -2,7 +2,7 @@ import numpy as np
 from sympy import cos
 from mappy import ContinuousMode as CM, DiscreteMode as DM, PoincareMap
 from mappy.root import *
-from mappy.tools import mplot2d, Plot2dConfig, ModeColor
+from mappy.tools import mplot2d, Plot2dConfig, ColorAlpha
 
 
 @CM.function(3, ["k", "V0", "V", "omega", "g1", "B1"])
@@ -118,12 +118,12 @@ def main():
         param_keys=["V", "B1"],
         param_idx=1,
         traj_color={
-            "alp_1": ModeColor("orange"),
-            "alp_2": ModeColor("teal"),
+            "alp_1": ColorAlpha("orange"),
+            "alp_2": ColorAlpha("teal"),
         },
         point_color={
-            "alp_1": ModeColor("orange"),
-            "alp_2": ModeColor("teal"),
+            "alp_1": ColorAlpha("orange"),
+            "alp_2": ColorAlpha("teal"),
         },
     )
 

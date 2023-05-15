@@ -1,6 +1,6 @@
 import numpy as np
 from mappy import DiscreteMode as DM, Diffeomorphism
-from mappy.tools import plot2d, Plot2dConfig, ModeColor
+from mappy.tools import plot2d, Plot2dConfig, ColorAlpha
 
 
 @DM.function(3, 3, ["alpha", "beta", "gamma"])
@@ -30,7 +30,7 @@ if __name__ == "__main__":
         yrange=(0, 1.2),
         param_keys=["alpha", "beta", "gamma"],
         param_idx=0,
-        traj_color={"logistic_3d": ModeColor("orange")},
+        traj_color={"logistic_3d": ColorAlpha("orange")},
         only_map=True,
     )
 
