@@ -1,7 +1,7 @@
 import numpy as np
 from mappy import ContinuousMode as CM, DiscreteMode as DM, PoincareMap
 from mappy.root import *
-from mappy.tools import plot2d, Plot2dConfig, ModeColor
+from mappy.tools import mplot2d, Plot2dConfig, ModeColor
 
 
 ## Izhikevich neuron model
@@ -58,8 +58,6 @@ def main():
 
     pmap = PoincareMap(all_modes, transitions, calc_jac=True, calc_hes=True)
 
-    f = lambda x, m, p: pmap.traj(x, m, "m0", params=p)
-
     config = Plot2dConfig(
         xrange=(-80, 35),
         yrange=(-10, 2),
@@ -72,13 +70,7 @@ def main():
         },
     )
 
-    plot2d(
-        f,
-        y0,
-        "m0",
-        param,
-        config=config,
-    )
+    mplot2d(pmap, y0, "m0", param, config=config)
 
     """ print(pmap.image_detail(y0, "m0", params=param))
 

@@ -1,5 +1,5 @@
 import numpy as np
-from mappy import DiscreteMode as DM, PoincareMap
+from mappy import DiscreteMode as DM, Diffeomorphism
 from mappy.tools import plot2d, Plot2dConfig, ModeColor
 
 
@@ -16,14 +16,7 @@ if __name__ == "__main__":
     vecx = np.array([0.1, 0.1])
     param = {"a": 1.4, "b": 0.3}
 
-    all_modes = (DM("henon", henon, True),)
-    trans = {"henon": "henon"}
-
-    pmap = PoincareMap(all_modes, trans, True, True)
-
-    print(pmap.traj(vecx, "henon", params=param))
-
-    f = lambda x, m, p: pmap.traj(x, m, params=p)
+    diff = Diffeomorphism("henon", henon)
 
     config = Plot2dConfig(
         xrange=(-1.5, 1.5),
@@ -34,4 +27,4 @@ if __name__ == "__main__":
         only_map=True,
     )
 
-    plot2d(f, vecx, "henon", param, config)
+    plot2d(diff, vecx, param, config)

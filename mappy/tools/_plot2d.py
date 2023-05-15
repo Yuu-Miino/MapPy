@@ -6,7 +6,14 @@ from matplotlib.backend_bases import MouseEvent, KeyEvent
 from numpy import ndarray
 
 from ..typing import Y, P
-from ..fundamentals import Sol, ModeSol, ModeTraj, convert_y_ndarray
+from ..fundamentals import (
+    Sol,
+    ModeSol,
+    ModeTraj,
+    convert_y_ndarray,
+    Diffeomorphism,
+    PoincareMap,
+)
 
 
 class ModeColor:
@@ -72,6 +79,28 @@ class PlotStatus:
 
 
 def plot2d(
+    dif: Diffeomorphism,
+    y0: Y,
+    params: P,
+    config: Plot2dConfig = Plot2dConfig(),
+):
+    f = lambda y, _, p: dif.traj(y, p)
+    _plot2d(f, y0, dif.dm.name, params, config)
+
+
+def mplot2d(
+    pmap: PoincareMap,
+    y0: Y,
+    m0: str,
+    params: P,
+    m1: str | list[str] | None = None,
+    config: Plot2dConfig = Plot2dConfig(),
+):
+    f = lambda y, m, p: pmap.traj(y, m, m1, p)
+    _plot2d(f, y0, m0, params, config)
+
+
+def _plot2d(
     solver: Callable[[ndarray, str, P], Sol | None],
     y0: Y,
     m0: str,
@@ -114,7 +143,7 @@ def plot2d(
                     ax.plot(
                         s.sol[config.xkey, 0],
                         s.sol[config.ykey, 0],
-                        "o",
+                        ".",
                         markersize=config.markersize,
                         color=config.mouse_point_color,
                         alpha=config.mouse_point_alpha,

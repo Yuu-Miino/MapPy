@@ -2,7 +2,7 @@ import numpy as np
 from sympy import cos
 from mappy import ContinuousMode as CM, DiscreteMode as DM, PoincareMap
 from mappy.root import *
-from mappy.tools import plot2d, Plot2dConfig, ModeColor
+from mappy.tools import mplot2d, Plot2dConfig, ModeColor
 
 
 @CM.function(3, ["k", "V0", "V", "omega", "g1", "B1"])
@@ -111,7 +111,6 @@ def main():
     pmap = PoincareMap(
         all_modes, trans, calc_jac=True, calc_hes=True, dense_output=True
     )
-    f = lambda x, m, p: pmap.traj(x, m, ["p1", "p2"], p)
 
     config = Plot2dConfig(
         xrange=(-10, 4),
@@ -128,7 +127,7 @@ def main():
         },
     )
 
-    plot2d(f, y0, "p1", param, config)
+    mplot2d(pmap, y0, "p1", param, ["p1", "p2"], config)
 
     """ print(pmap.image_detail(y0, param))
 

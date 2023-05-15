@@ -1,5 +1,5 @@
 import numpy as np
-from mappy import DiscreteMode as DM, PoincareMap
+from mappy import DiscreteMode as DM, Diffeomorphism
 from mappy.tools import plot2d, Plot2dConfig, ModeColor
 
 
@@ -23,14 +23,7 @@ if __name__ == "__main__":
     vecx = np.array([0.4212, 0.1436, 0.7108])
     param = {"alpha": 3.6324, "beta": 0.0193, "gamma": 0.0146}
 
-    all_modes = (DM("logistic_3d", logistic_3d, True),)
-    trans = {"logistic_3d": "logistic_3d"}
-
-    pmap = PoincareMap(all_modes, trans, True, True)
-
-    print(pmap.traj(vecx, "logistic_3d", params=param))
-
-    f = lambda x, m, p: pmap.traj(x, m, params=p)
+    dmap = Diffeomorphism("logistic_3d", logistic_3d)
 
     config = Plot2dConfig(
         xrange=(0, 1.2),
@@ -41,4 +34,4 @@ if __name__ == "__main__":
         only_map=True,
     )
 
-    plot2d(f, vecx, "logistic_3d", param, config)
+    plot2d(dmap, vecx, param, config)

@@ -827,7 +827,25 @@ class DiscreteMode(Mode[Y, YF]):
         return result
 
 
-class SolveIvbmpResult(BasicResult, Generic[Y]):
+class DiffeomorphismResult(BasicResult, Generic[Y]):
+    def __init__(
+        self,
+        y: Y,
+        jac: numpy.ndarray | float | None = None,
+        eigvals: Y | None = None,
+        eigvecs: numpy.ndarray | float | None = None,
+        hes: numpy.ndarray | float | None = None,
+        sol: Sol | None = None,
+    ) -> None:
+        self.y = y
+        self.jac = jac
+        self.hes = hes
+        self.eigvals = eigvals
+        self.eigvecs = eigvecs
+        self.sol = sol
+
+
+class SolveIvbmpResult(DiffeomorphismResult, Generic[Y]):
     """Result of ``solve_ivbmp``
 
     Result of ``solve_ivbmp``
@@ -858,13 +876,8 @@ class SolveIvbmpResult(BasicResult, Generic[Y]):
         hes: numpy.ndarray | float | None = None,
         sol: ModeSol | None = None,
     ) -> None:
-        self.y = y
+        super().__init__(y, jac, eigvals, eigvecs, hes, sol)
         self.trans_history = trans_history
-        self.jac = jac
-        self.hes = hes
-        self.eigvals = eigvals
-        self.eigvecs = eigvecs
-        self.sol = sol
 
 
 class SomeJacUndefined(Exception):
@@ -955,6 +968,63 @@ def solve_ivbmp(
         hes,
         None if len(sol) == 0 else ModeSol(_y0, m0, _y1, m1, sol),
     )
+
+
+class Diffeomorphism(Generic[Y]):
+    def __init__(self, name: str, fun: Callable):
+        self.dm = DiscreteMode(name, fun, inTraj=True)
+
+    def image_detail(
+        self,
+        y0: Y,
+        params: P | None = None,
+        iterations: int = 1,
+        calc_jac: bool = True,
+        calc_hes: bool = True,
+    ) -> DiffeomorphismResult[Y]:
+        if iterations < 1:
+            raise ValueError("iterations must be greater than or equal to 1.")
+
+        _y0 = convert_y_ndarray(y0)
+        _y1, jac, _eigs, eigv, hes, _, sol, _ = _exec_calculation(
+            _y0,
+            iterations,
+            calc_jac,
+            calc_hes,
+            0,
+            {self.dm.name: self.dm.name},
+            (self.dm,),
+            self.dm.name,
+            None,
+            params,
+            True,
+        )
+
+        y1 = revert_y_ndarray(_y1, y0)
+        eigs = None if _eigs is None else revert_y_ndarray(_eigs, y0)
+        ret = DiffeomorphismResult[Y](
+            y1,
+            jac,
+            eigs,
+            eigv,
+            hes,
+            None if len(sol) == 0 else Sol(_y0, _y1, sol),
+        )
+
+        return ret
+
+    def image(
+        self,
+        y0: Y,
+        params: P | None = None,
+        iterations: int = 1,
+    ) -> Y:
+        ret = self.image_detail(y0, params, iterations, False, False)
+        return ret.y
+
+    def traj(self, y0: Y, params: P | None = None, iterations: int = 1) -> Sol | None:
+        ret = self.image_detail(y0, params, iterations, False, False)
+        return ret.sol
 
 
 class PoincareMap(Generic[Y]):
@@ -1069,7 +1139,7 @@ class PoincareMap(Generic[Y]):
         m1: str | list[str] | None = None,
         params: P | None = None,
         iterations: int = 1,
-    ) -> ModeSol | None:
+    ) -> Sol | None:
         slv = solve_poincare_map(
             y0,
             self.all_modes,
@@ -1262,6 +1332,13 @@ def _exec_calculation(
             if current_mode.name in end_mode:
                 break
 
+    eigs, eigv = _calc_eig_from_jac(jac)
+    _hes = _convert_hes_ndarray(hes)
+
+    return (_y0, jac, eigs, eigv, _hes, trans_history, sol, current_mode.name)
+
+
+def _calc_eig_from_jac(jac: numpy.ndarray | None):
     eigs = None
     eigv = None
 
@@ -1276,10 +1353,13 @@ def _exec_calculation(
             except:
                 pass
 
+    return (eigs, eigv)
+
+
+def _convert_hes_ndarray(hes: numpy.ndarray | None):
     if hes is not None:
         if hes.size == 1:
             hes = convert_y_ndarray(float(hes))
         else:
             hes = numpy.squeeze(hes)
-
-    return (_y0, jac, eigs, eigv, hes, trans_history, sol, current_mode.name)
+    return hes
