@@ -1027,7 +1027,7 @@ class Diffeomorphism(Generic[Y]):
         return ret.sol
 
 
-class PoincareMap(Generic[Y]):
+class PoincareMap(Diffeomorphism, Generic[Y]):
     """Construct Poincare map
 
     Construct Poincare map
@@ -1050,23 +1050,22 @@ class PoincareMap(Generic[Y]):
         self,
         all_modes: tuple[Mode, ...],
         trans: dict[str, str | list[str]] | dict[str, str] | dict[str, list[str]],
-        calc_jac: bool = False,
-        calc_hes: bool = False,
+        m1: str | list[str] | None = None,
         **options,
     ) -> None:
         self.all_modes = all_modes
         self.trans = trans
-        self.calc_jac = calc_jac
-        self.calc_hes = calc_hes
         self.options = options
+        self.m1 = m1
 
     def image_detail(
         self,
         y0: Y,
         m0: str,
-        m1: str | list[str] | None = None,
         params: P | None = None,
         iterations: int = 1,
+        calc_jac: bool = True,
+        calc_hes: bool = True,
     ) -> SolveIvbmpResult[Y]:
         """Calculate image of the Poincare map with detailed information
 
@@ -1087,9 +1086,9 @@ class PoincareMap(Generic[Y]):
             self.all_modes,
             self.trans,
             m0,
-            m1,
-            calc_jac=self.calc_jac,
-            calc_hes=self.calc_hes,
+            self.m1,
+            calc_jac=calc_jac,
+            calc_hes=calc_hes,
             params=params,
             map_count=iterations,
             **self.options,
@@ -1100,7 +1099,6 @@ class PoincareMap(Generic[Y]):
         self,
         y0: Y,
         m0: str,
-        m1: str | list[str] | None = None,
         params: P | None = None,
         iterations: int = 1,
     ) -> Y:
@@ -1118,40 +1116,17 @@ class PoincareMap(Generic[Y]):
         numpy.ndarray | float
             The image of y0 under the map.
         """
-        slv = solve_poincare_map(
-            y0,
-            self.all_modes,
-            self.trans,
-            m0,
-            m1,
-            calc_jac=False,
-            calc_hes=False,
-            params=params,
-            map_count=iterations,
-            **self.options,
-        )
+        slv = self.image_detail(y0, m0, params, iterations, False, False)
         return slv.y
 
     def traj(
         self,
         y0: Y,
         m0: str,
-        m1: str | list[str] | None = None,
         params: P | None = None,
         iterations: int = 1,
     ) -> Sol | None:
-        slv = solve_poincare_map(
-            y0,
-            self.all_modes,
-            self.trans,
-            m0,
-            m1,
-            calc_jac=False,
-            calc_hes=False,
-            params=params,
-            map_count=iterations,
-            **self.options,
-        )
+        slv = self.image_detail(y0, m0, params, iterations, False, False)
         return slv.sol
 
 

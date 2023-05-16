@@ -1,5 +1,6 @@
 import numpy as np
 from mappy import DiscreteMode as DM, Diffeomorphism
+from mappy.root import find_cycle
 from mappy.tools import plot2d, Plot2dConfig, ColorAlpha
 
 
@@ -20,7 +21,7 @@ def logistic_3d(iny, param):
 
 
 if __name__ == "__main__":
-    vecx = np.array([0.4212, 0.1436, 0.7108])
+    vecx = np.array([0.75, 0.72, 0.74])
     param = {"alpha": 3.6324, "beta": 0.0193, "gamma": 0.0146}
 
     dmap = Diffeomorphism("logistic_3d", logistic_3d)
@@ -28,11 +29,14 @@ if __name__ == "__main__":
     config = Plot2dConfig(
         xrange=(0, 1.2),
         yrange=(0, 1.2),
+        ykey=2,
         param_keys=["alpha", "beta", "gamma"],
         param_idx=0,
         traj_color=ColorAlpha("orange"),
         point_color=ColorAlpha("teal"),
         only_map=True,
     )
+
+    # find_cycle()
 
     plot2d(dmap, vecx, param, config)

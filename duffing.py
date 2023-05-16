@@ -48,7 +48,7 @@ def main():
 
     trans = {"p": "duffing", "duffing": ["t_reset"], "t_reset": "pinv", "pinv": "p"}
 
-    pmap = PoincareMap(all_modes, trans, True, True)
+    pmap = PoincareMap(all_modes, trans, "p")
 
     config = Plot2dConfig(
         xrange=(-1.5, 1.5),

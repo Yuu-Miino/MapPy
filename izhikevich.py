@@ -56,7 +56,7 @@ def main():
 
     transitions = {"m0": "m1", "m1": ["m2"], "m2": "m3", "m3": "m0"}
 
-    pmap = PoincareMap(all_modes, transitions, calc_jac=True, calc_hes=True)
+    pmap = PoincareMap(all_modes, transitions, "m0")
 
     config = Plot2dConfig(
         xrange=(-80, 35),

@@ -108,9 +108,7 @@ def main():
         "pinv2": "p2",
     }
 
-    pmap = PoincareMap(
-        all_modes, trans, calc_jac=True, calc_hes=True, dense_output=True
-    )
+    pmap = PoincareMap(all_modes, trans, ["p1", "p2"], dense_output=True)
 
     config = Plot2dConfig(
         xrange=(-10, 4),
@@ -129,7 +127,7 @@ def main():
         },
     )
 
-    mplot2d(pmap, y0, "p1", param, ["p1", "p2"], config)
+    mplot2d(pmap, y0, "p1", param, config)
 
     """ print(pmap.image_detail(y0, param))
 

@@ -99,10 +99,9 @@ def mplot2d(
     y0: Y,
     m0: str,
     params: P,
-    m1: str | list[str] | None = None,
     config: Plot2dConfig = Plot2dConfig(),
 ):
-    f = lambda y, m, p: pmap.traj(y, m, m1, p)
+    f = lambda y, m, p: pmap.traj(y, m, p)
     _plot2d(f, y0, m0, params, config)
 
 
