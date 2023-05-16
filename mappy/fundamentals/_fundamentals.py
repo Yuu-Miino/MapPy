@@ -899,7 +899,7 @@ def solve_ivbmp(
     all_modes: tuple[Mode, ...],
     trans: dict[str, str | list[str]],
     m0: str,
-    end_mode: str | list[str] | None = None,
+    m1: str | list[str] | None = None,
     calc_jac: bool = True,
     calc_hes: bool = False,
     params: P | None = None,
@@ -921,7 +921,7 @@ def solve_ivbmp(
         Transition function that maps from ``current mode`` to ``next mode``.
     initial_mode : str
         Name of the initial mode.
-    end_mode : Mode or None, optional
+    m1 : Mode or None, optional
         Name of the end mode, by default ``None``. If ``None``, the end mode in the method is the same as ``initial_mode``.
     calc_jac : bool, optional
         Flag to calculate the Jacobian matrix, by default ``True``.
@@ -951,7 +951,7 @@ def solve_ivbmp(
         trans,
         all_modes,
         m0,
-        end_mode,
+        m1,
         params,
         dense_output,
     )
@@ -1135,7 +1135,7 @@ def solve_poincare_map(
     all_modes: tuple[Mode, ...],
     trans: dict[str, str | list[str]] | dict[str, str] | dict[str, list[str]],
     m0: str,
-    end_mode: str | list[str] | None = None,
+    m1: str | list[str] | None = None,
     calc_jac: bool = True,
     calc_hes: bool = False,
     params: P | None = None,
@@ -1157,7 +1157,7 @@ def solve_poincare_map(
         Transition function that maps from ``current mode`` to ``next mode``.
     initial_mode : str
         Name of the initial mode.
-    end_mode : Mode or None, optional
+    m1 : Mode or None, optional
         Name of the end mode, by default ``None``. If ``None``, the end mode in the method is the same as ``initial_mode``.
     calc_jac : bool, optional
         Flag to calculate the Jacobian matrix, by default ``True``.
@@ -1186,7 +1186,7 @@ def solve_poincare_map(
         trans,
         all_modes,
         m0,
-        end_mode,
+        m1,
         params,
         dense_output,
     )
@@ -1215,7 +1215,7 @@ def _exec_calculation(
     trans: dict[str, str | list[str]] | dict[str, str] | dict[str, list[str]],
     all_modes: tuple[Mode, ...],
     initial_mode: str,
-    end_mode: str | list[str] | None,
+    m1: str | list[str] | None,
     params: P | None,
     dense_output: bool,
 ):
@@ -1228,14 +1228,14 @@ def _exec_calculation(
     current_mode: Mode = all_modes[mdi.index(initial_mode)]
     trans_history.append(initial_mode)
 
-    if end_mode is None:
-        end_mode = [initial_mode]
-    elif isinstance(end_mode, str):
-        end_mode = [end_mode]
+    if m1 is None:
+        m1 = [initial_mode]
+    elif isinstance(m1, str):
+        m1 = [m1]
     else:
         pass
 
-    for em in end_mode:
+    for em in m1:
         try:
             _ = mdi.index(em)
         except KeyError as e:
@@ -1304,7 +1304,7 @@ def _exec_calculation(
             trans_history.append(next)
 
             count += 1
-            if current_mode.name in end_mode:
+            if current_mode.name in m1:
                 break
 
     eigs, eigv = _calc_eig_from_jac(jac)
