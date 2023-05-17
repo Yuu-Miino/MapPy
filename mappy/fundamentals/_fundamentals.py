@@ -974,6 +974,9 @@ class Diffeomorphism(Generic[Y]):
     def __init__(self, name: str, fun: Callable):
         self.dm = DiscreteMode(name, fun, inTraj=True)
 
+    def dimension(self):
+        return self.dm.fun.dom_dim
+
     def image_detail(
         self,
         y0: Y,
@@ -1057,6 +1060,11 @@ class PoincareMap(Diffeomorphism, Generic[Y]):
         self.trans = trans
         self.options = options
         self.m1 = m1
+
+    def dimension(self, m0: str):
+        if m0 not in [_m.name for _m in self.all_modes]:
+            raise ValueError(f"{m0} is not in all_modes.")
+        return self.all_modes[[_m.name for _m in self.all_modes].index(m0)].fun.dom_dim
 
     def image_detail(
         self,

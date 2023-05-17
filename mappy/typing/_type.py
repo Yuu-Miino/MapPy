@@ -6,7 +6,9 @@ YF = TypeVar(
     "YF", ndarray, float, int, list[float], tuple[float], list[int], tuple[int]
 )
 YB = TypeVar("YB", float, int)
-YC = TypeVar("YC", ndarray, float, tuple)
+YC = TypeVar(
+    "YC", ndarray, float, int, list[float], tuple[float], list[int], tuple[int], tuple
+)
 P: TypeAlias = dict[str, Any]
 
 _T = TypeVar("_T")

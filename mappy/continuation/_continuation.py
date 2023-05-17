@@ -6,6 +6,7 @@ from numpy import ndarray
 from ..typing._type import is_type_of, P, YC
 from ..fundamentals._core import BasicResult
 
+
 class ContinuationFunResult(BasicResult):
     """Result of each step in parameter continuation
 
@@ -24,20 +25,26 @@ class ContinuationFunResult(BasicResult):
     others : dict[str, Any] | None
         Any other values to return, by default ``None``.
     """
-    def __init__(self,
-        success: bool, y: YC | None, p: P | None, others: Any | None = None,
+
+    def __init__(
+        self,
+        success: bool,
+        y: YC | None,
+        p: P | None,
+        others: Any | None = None,
     ) -> None:
         self.success = success
         self.y = y
         self.p = p
         self.others = others
 
+
 def continuation(
     fun: Callable[[YC, P | None], ContinuationFunResult],
     y0: YC,
     params: P,
     end_val: float,
-    param_idx: str,
+    param_key: str,
     resolution: int = 100,
     show_progress: bool = False,
 ) -> list[tuple[YC, P, dict[str, Any] | None]]:
@@ -60,7 +67,7 @@ def continuation(
         Parameter dictionary to pass to `fun`.
     end_val : float
         End value of the continuation.
-    param_idx : int, optional
+    param_key : int, optional
         Index of the parameter to continue in `params`.
     resolution : int, optional
         Resolution of the continuation from the current value to `end_val`, by default `100`.
@@ -75,7 +82,7 @@ def continuation(
         Result list of the tuples containing `y` and `params`.
     """
 
-    h = (end_val-params[param_idx])/(resolution-1)
+    h = (end_val - params[param_key]) / (resolution - 1)
 
     y = y0.copy() if isinstance(y0, ndarray) else y0
     p = params.copy()
@@ -107,7 +114,7 @@ def continuation(
             precision = 10
             show_str: list[str] = ["\tSUCCESS", f"{i+1:0{len(str(resolution))}d}"]
             for val in [y, list(p.values())]:
-                if isinstance(val, float) or len(val) == 1:
+                if isinstance(val, float):
                     show_str.append(f"{val:+.{precision}f}")
                 else:
                     show_str.append(str(val))
@@ -115,7 +122,8 @@ def continuation(
 
         found.append((y, p.copy(), None if o is None else o.copy()))
 
-        if i != resolution-1:
-            p[param_idx] += h
-    if show_progress: print()
+        if i != resolution - 1:
+            p[param_key] += h
+    if show_progress:
+        print()
     return found

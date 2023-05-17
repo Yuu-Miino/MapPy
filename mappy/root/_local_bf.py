@@ -1,7 +1,14 @@
 """Local bifurcation set
 """
 from typing import TypeVar, Any
-from mappy import PoincareMap
+from collections.abc import Callable
+from mappy import (
+    PoincareMap,
+    Diffeomorphism,
+    DiffeomorphismResult,
+    convert_y_ndarray,
+    revert_y_ndarray,
+)
 import numpy
 from scipy.optimize import root, OptimizeResult
 from ..typing import is_type_of, Y, P
@@ -12,21 +19,26 @@ VAR_LBF = TypeVar("VAR_LBF", bound=numpy.ndarray)
 
 
 def _cond_local_bf(
-    pmap: PoincareMap, var: VAR_LBF, params: P, param_idx: str, period: int = 1
+    pmap: Callable[[numpy.ndarray, P | None, int], DiffeomorphismResult],
+    var: VAR_LBF,
+    params: P,
+    param_key: str,
+    dimension: int,
+    period: int = 1,
 ) -> VAR_LBF:
-    y0 = var[0 : pmap.dimension]
-    param, theta = var[pmap.dimension :]
+    y0 = var[0:dimension]
+    param, theta = var[dimension:]
     inparams = params.copy()
-    inparams[param_idx] = param
+    inparams[param_key] = param
 
-    res = pmap.image_detail(y0, inparams, iterations=period)
-    det = numpy.linalg.det(res.jac - numpy.exp(1j * theta) * numpy.eye(pmap.dimension))
+    res = pmap(y0, inparams, period)
+    det = numpy.linalg.det(res.jac - numpy.exp(1j * theta) * numpy.eye(dimension))
 
     ret = numpy.empty(
-        pmap.dimension + 2,
+        dimension + 2,
     )
-    ret[0 : pmap.dimension] = res.y - y0
-    ret[pmap.dimension :] = numpy.real(det), numpy.imag(det)
+    ret[0:dimension] = res.y - y0
+    ret[dimension:] = numpy.real(det), numpy.imag(det)
     if not is_type_of(ret, type(var)):
         raise TypeError(type(ret), type(var))
     return ret
@@ -36,7 +48,7 @@ class FindLocalBfResult(FindCycleResult[Y]):
     def __init__(
         self,
         itr: int,
-        err: numpy.ndarray | float,
+        err: Y,
         success: bool = False,
         y: Y | None = None,
         eigvals: Y | None = None,
@@ -50,57 +62,55 @@ class FindLocalBfResult(FindCycleResult[Y]):
 
 
 def find_local_bf(
-    poincare_map: PoincareMap[Y],
+    diff: Diffeomorphism,
     y0: Y,
     params: P,
-    param_idx: str,
+    param_key: str,
     theta: float,
     period: int = 1,
+    m0: str | None = None,
 ) -> FindLocalBfResult[Y]:
+    if isinstance(diff, PoincareMap):
+        if m0 is None:
+            raise ValueError("m0 must be specified for PoincareMap")
+        f = lambda y, p, n: diff.image_detail(y, m0, p, n)
+        dim = diff.dimension(m0)
+    else:
+        f = lambda y, p, n: diff.image_detail(y, p, n)
+        dim = diff.dimension()
+
     objective_fun = lambda y: _cond_local_bf(
-        pmap=poincare_map, var=y, params=params, param_idx=param_idx, period=period
+        pmap=f,
+        var=y,
+        params=params,
+        param_key=param_key,
+        period=period,
+        dimension=dim,
     )
 
     var = numpy.array(y0).squeeze()
-    var = numpy.append(var, [params[param_idx], theta])
+    var = numpy.append(var, [params[param_key], theta])
     rt: OptimizeResult = root(objective_fun, var)
 
     y1, eigvals, eigvecs = None, None, None
     inparams = params.copy()
     theta1: float | None = None
-    err = rt.fun
+    err = revert_y_ndarray(rt.fun, y0)
     if rt.success:
-        y1 = rt.x[0 : poincare_map.dimension]
-        param1, theta1 = rt.x[poincare_map.dimension :]
-        inparams[param_idx] = param1
+        _y1 = rt.x[0:dim]
+        param1, theta1 = rt.x[dim:]
+        inparams[param_key] = param1
 
-        jac = poincare_map.image_detail(y1, inparams, period).jac
+        jac = f(_y1, inparams, period).jac
+
         if jac is not None:
             if isinstance(jac, numpy.ndarray):
-                eigvals, eigvecs = numpy.linalg.eig(jac)
+                _eigvals, eigvecs = numpy.linalg.eig(jac)
             else:
-                eigvals = jac
+                _eigvals = numpy.array([jac])
+            eigvals = revert_y_ndarray(_eigvals, y0)
 
-        if isinstance(y0, float):
-            if isinstance(y1, numpy.ndarray) and y1.size == 1:
-                y1 = float(y1)
-            if isinstance(eigvals, numpy.ndarray) and eigvals.size == 1:
-                eigvals = float(eigvals)
-
-        if isinstance(y0, numpy.ndarray):
-            if isinstance(y1, float):
-                y1 = numpy.array(y1)
-            if isinstance(eigvals, float):
-                eigvals = numpy.array(eigvals)
-
-        if isinstance(err, numpy.ndarray) and err.size == 1:
-            err = float(err)
-
-        if not is_type_of(y1, type(y0)):
-            raise TypeError(type(y1), type(y0))
-
-        if not is_type_of(eigvals, type(y0)) and eigvals is not None:
-            raise TypeError((type(eigvals), type(y0)))
+        y1 = revert_y_ndarray(_y1, y0)
 
     return FindLocalBfResult[Y](
         success=rt.success,
@@ -122,27 +132,26 @@ class ParameterKeyError(Exception):
 
 
 def trace_local_bf(
-    poincare_map: PoincareMap[Y],
+    diff: Diffeomorphism[Y],
     y0: Y,
     params: P,
-    bf_param_idx: str,
+    bf_param_key: str,
     theta: float,
-    cnt_param_idx: str,
+    cnt_param_key: str,
     end_val: float,
     resolution: int = 100,
     period: int = 1,
     show_progress: bool = False,
-) -> list[tuple[tuple[Y, float], P, dict[str, Any] | None]]:
-    if bf_param_idx == cnt_param_idx:
+    m0: str | None = None,
+) -> list[tuple[tuple[numpy.ndarray, float], P, dict[str, Any] | None]]:
+    if bf_param_key == cnt_param_key:
         raise ParameterKeyError
 
-    def lamb(y: tuple[Y, float], p: P | None):
+    def lamb(y: tuple[numpy.ndarray, float], p: P | None):
         y00, theta0 = y
-        if not is_type_of(y00, type(y0)):
-            raise TypeError(type(y00), type(y0))
         if p is None:
             raise ValueError("Parameter is None but considering bifurcation problem.")
-        ret = find_local_bf(poincare_map, y00, p, bf_param_idx, theta0, period)
+        ret = find_local_bf(diff, y00, p, bf_param_key, theta0, period, m0=m0)
         y1 = None
         if ret.success:
             if ret.y is None or ret.theta is None:
@@ -164,12 +173,13 @@ def trace_local_bf(
             },
         )
 
+    _y0 = convert_y_ndarray(y0)
     return continuation(
         lamb,
-        (y0, theta),
+        (_y0, theta),
         params,
         end_val,
-        param_idx=cnt_param_idx,
+        param_key=cnt_param_key,
         resolution=resolution,
         show_progress=show_progress,
     )

@@ -1,15 +1,27 @@
 """Cycle (periodic point)
 """
 from typing import Generic, Any
-from mappy import PoincareMap, BasicResult
+from collections.abc import Callable
+from mappy import (
+    Diffeomorphism,
+    PoincareMap,
+    BasicResult,
+    convert_y_ndarray,
+    revert_y_ndarray,
+)
 import numpy
 from scipy.optimize import root, OptimizeResult
 from ..typing import is_type_of, Y, P
 from ..continuation import ContinuationFunResult, continuation
 
 
-def _cond_cycle(pmap: PoincareMap, y0: Y, params: P | None, period: int) -> Y:
-    y1 = pmap.image(y0, params, period)
+def _cond_cycle(
+    pmap: Callable[[numpy.ndarray, P | None, int], numpy.ndarray],
+    y0: numpy.ndarray,
+    params: P | None,
+    period: int,
+) -> numpy.ndarray:
+    y1 = pmap(y0, params, period)
     return y1 - y0
 
 
@@ -35,7 +47,7 @@ class FindCycleResult(BasicResult, Generic[Y]):
     def __init__(
         self,
         itr: int,
-        err: numpy.ndarray | float,
+        err: Y,
         success: bool = False,
         y: Y | None = None,
         eigvals: Y | None = None,
@@ -50,7 +62,11 @@ class FindCycleResult(BasicResult, Generic[Y]):
 
 
 def find_cycle(
-    poincare_map: PoincareMap, y0: Y, params: P | None = None, period: int = 1
+    diff: Diffeomorphism,
+    y0: Y,
+    params: P | None = None,
+    period: int = 1,
+    m0: str | None = None,
 ) -> FindCycleResult[Y]:
     """Find a periodic cycle of given map
 
@@ -71,43 +87,35 @@ def find_cycle(
         Instance containing the result of finding calculation
 
     """
+    if isinstance(diff, PoincareMap):
+        if m0 is None:
+            raise ValueError("m0 must be specified for PoincareMap")
+        f = lambda y, p, n: diff.image(y, m0, p, n)
+        fd = lambda y, p, n: diff.image_detail(y, m0, p, n, True, True)
+    else:
+        f = lambda y, p, n: diff.image(y, p, n)
+        fd = lambda y, p, n: diff.image_detail(y, p, n, True, True)
 
-    objective_fun = lambda y: _cond_cycle(poincare_map, y, params, period)
+    objective_fun = lambda y: _cond_cycle(f, y, params, period)
 
-    rt: OptimizeResult = root(objective_fun, y0)
+    _y0 = convert_y_ndarray(y0)
+    rt: OptimizeResult = root(objective_fun, _y0)
 
     y1, eigvals, eigvecs = None, None, None
-    err = rt.fun
+    err = revert_y_ndarray(rt.fun, y0)
     if rt.success:
-        y1 = rt.x
+        _y1 = rt.x
 
-        jac = poincare_map.image_detail(y1, params, period).jac
+        jac = fd(_y1, params, period).jac
+
         if jac is not None:
             if isinstance(jac, numpy.ndarray):
-                eigvals, eigvecs = numpy.linalg.eig(jac)
+                _eigvals, eigvecs = numpy.linalg.eig(jac)
             else:
-                eigvals = jac
+                _eigvals = numpy.array([jac])
+            eigvals = revert_y_ndarray(_eigvals, y0)
 
-        if isinstance(y0, float):
-            if isinstance(y1, numpy.ndarray) and y1.size == 1:
-                y1 = float(y1)
-            if isinstance(eigvals, numpy.ndarray) and eigvals.size == 1:
-                eigvals = float(eigvals)
-
-        if isinstance(y0, numpy.ndarray):
-            if isinstance(y1, float):
-                y1 = numpy.array(y1)
-            if isinstance(eigvals, float):
-                eigvals = numpy.array(eigvals)
-
-        if isinstance(err, numpy.ndarray) and err.size == 1:
-            err = float(err)
-
-        if not is_type_of(y1, type(y0)):
-            raise TypeError(type(y1), type(y0))
-
-        if not is_type_of(eigvals, type(y0)) and eigvals is not None:
-            raise TypeError((type(eigvals), type(y0)))
+        y1 = revert_y_ndarray(_y1, y0)
 
     return FindCycleResult[Y](
         success=rt.success, y=y1, eigvals=eigvals, eigvecs=eigvecs, itr=rt.nfev, err=err
@@ -115,17 +123,18 @@ def find_cycle(
 
 
 def trace_cycle(
-    poincare_map: PoincareMap[Y],
+    diff: Diffeomorphism[Y],
     y0: Y,
     params: P,
-    cnt_param_idx: str,
+    cnt_param_key: str,
     end_val: float,
     resolution: int = 100,
     period: int = 1,
     show_progress: bool = False,
-) -> list[tuple[Y, P, dict[str, Any] | None]]:
-    def lamb(y: Y, p: P | None):
-        ret = find_cycle(poincare_map, y, p, period)
+    m0: str | None = None,
+) -> list[tuple[numpy.ndarray, P, dict[str, Any] | None]]:
+    def lamb(y: numpy.ndarray, p: P | None):
+        ret = find_cycle(diff, y, p, period, m0=m0)
         return ContinuationFunResult(
             ret.success,
             ret.y,
@@ -138,12 +147,13 @@ def trace_cycle(
             },
         )
 
+    _y0 = convert_y_ndarray(y0)
     return continuation(
         lamb,
-        y0,
+        _y0,
         params,
         end_val,
-        param_idx=cnt_param_idx,
+        param_key=cnt_param_key,
         resolution=resolution,
         show_progress=show_progress,
     )

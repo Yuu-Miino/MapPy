@@ -58,39 +58,44 @@ def main():
 
     pmap = PoincareMap(all_modes, transitions, "m0")
 
-    config = Plot2dConfig(
-        xrange=(-80, 35),
-        yrange=(-10, 2),
-        xlabel="v",
-        ylabel="u",
-        param_keys=["a", "I"],
-        param_idx=0,
-        float_mouse_xy="y",
-        traj_color={
-            "m1": ColorAlpha("teal"),
-            "m2": ColorAlpha("orange"),
-        },
-    )
+    mode = "trace"
 
-    mplot2d(pmap, y0, "m0", param, config=config)
+    if mode == "traj":
+        config = Plot2dConfig(
+            xrange=(-80, 35),
+            yrange=(-10, 2),
+            xlabel="v",
+            ylabel="u",
+            param_keys=["a", "I"],
+            param_idx=0,
+            float_mouse_xy="y",
+            traj_color={
+                "m1": ColorAlpha("teal"),
+                "m2": ColorAlpha("orange"),
+            },
+        )
 
-    """ print(pmap.image_detail(y0, "m0", params=param))
+        mplot2d(pmap, y0, "m0", param, config=config)
 
-    res = trace_cycle(pmap, y0, param, "I", 4.5, show_progress=True)
+    elif mode == "trace":
+        print(pmap.image_detail(y0, "m0", params=param))
 
-    y1, p1 = res[-1][0:2]
+        res = trace_cycle(pmap, y0, param, "I", 4.5, show_progress=True, m0="m0")
 
-    ret = trace_local_bf(
-        poincare_map=pmap,
-        y0=y1,
-        params=p1,
-        bf_param_idx="I",
-        theta=3.14,
-        cnt_param_idx="a",
-        end_val=0.3,
-        show_progress=True,
-    )
-    print(len(ret)) """
+        y1, p1 = res[-1][0:2]
+
+        ret = trace_local_bf(
+            pmap,
+            y0=y1,
+            params=p1,
+            bf_param_key="I",
+            theta=3.14,
+            cnt_param_key="a",
+            end_val=0.3,
+            show_progress=True,
+            m0="m0",
+        )
+        print(len(ret))
 
 
 if __name__ == "__main__":
