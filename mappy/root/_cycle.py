@@ -11,7 +11,7 @@ from mappy import (
 )
 import numpy
 from scipy.optimize import root, OptimizeResult
-from ..typing import is_type_of, Y, P
+from ..typing import Y, P
 from ..continuation import ContinuationFunResult, continuation
 
 

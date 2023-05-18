@@ -39,9 +39,7 @@ def _cond_local_bf(
     )
     ret[0:dimension] = res.y - y0
     ret[dimension:] = numpy.real(det), numpy.imag(det)
-    if not is_type_of(ret, type(var)):
-        raise TypeError(type(ret), type(var))
-    return ret
+    return revert_y_ndarray(ret, var)
 
 
 class FindLocalBfResult(FindCycleResult[Y]):
