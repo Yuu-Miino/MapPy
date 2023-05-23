@@ -17,9 +17,8 @@ class ContinuationFunResult(BasicResult):
     ----------
     success : bool
         Whether or not that a single step exited successfully.
-    y : numpy.ndarray, float, tuple, or None
-        Obtained result of a single step. The value must have the same type as
-        the parameter of the step.
+    y : numpy.ndarray, float, int, list, tuple, or None
+        Obtained result of a single step.
     p : dict[str, Any] | None
         Parameter dictionary.
     others : dict[str, Any] | None
@@ -48,38 +47,32 @@ def continuation(
     resolution: int = 100,
     show_progress: bool = False,
 ) -> list[tuple[YC, P, dict[str, Any] | None]]:
-    """Parameter continuation
+    """Perform a continuation algorithm to find solutions of a function.
 
-    The method to operate the parameter continuation of a given `fun`.
-    It determines the step size of the continuation from given parameters
-    `end_val` and `resolution`.
-    In other words, `resolution` is the number of iterations of the continuation.
-    Significant alternatives of a `continuation` method in some analytic purposes
-    are available in each subpackage, like `mappy.root.trace_cycle`.
+    Parameters:
+        fun : callable
+            A function that takes arguments `y` and `p` and returns a `ContinuationFunResult`.
+        y0 : YC
+            Initial value of `y`.
+        params : P
+            Initial parameter values `p`.
+        end_val : float
+            The end value of the parameter specified by `param_key`.
+        param_key : str
+            The key for the parameter that will be varied during the continuation algorithm.
+        resolution : int, optional
+            The number of steps to perform during the continuation algorithm (default: 100).
+        show_progress : bool, optional
+            Whether to show progress during the algorithm (default: False).
 
-    Parameters
-    ----------
-    fun : Callable
-        Function to call in each step.
-    y0 : numpy.ndarray, float, or tuple
-        Input of `fun` in the initial step.
-    params : dict[str, Any]
-        Parameter dictionary to pass to `fun`.
-    end_val : float
-        End value of the continuation.
-    param_key : int, optional
-        Index of the parameter to continue in `params`.
-    resolution : int, optional
-        Resolution of the continuation from the current value to `end_val`, by default `100`.
+    Returns:
+        list[tuple[YC, P, dict[str, Any] | None]]
+            A list of tuples containing the updated `y`, `p`, and additional data (`o`) for each successful step.
 
-    See also
-    --------
-    mappy.root.trace_cycle, mappy.root.trace_local_bf
-
-    Returns
-    -------
-    list[tuple[y, params]]
-        Result list of the tuples containing `y` and `params`.
+    Raises:
+        TypeError
+            If the return value of `fun` is not an instance of `ContinuationFunResult`,
+            or if the types of `y` or `p` are not compatible with the initial values.
     """
 
     h = (end_val - params[param_key]) / (resolution - 1)
