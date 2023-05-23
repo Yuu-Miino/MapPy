@@ -15,18 +15,19 @@ _T = TypeVar("_T")
 
 
 def is_type_of(target: Any, type: Type[_T]) -> TypeGuard[_T]:
-    """Check target is a given type with TypeGuard
+    """
+    Check if the target is of a given type using TypeGuard.
 
     Parameters
     ----------
     target : Any
-        Target of the function.
+        The target to be checked.
     type : Type
-        Type to check.
+        The type to check against.
 
     Returns
     -------
-    bool
-        ``True`` if target is the given type, and ``False`` otherwise.
+    TypeGuard[_T]
+        Returns ``True`` if the target is of the given type, and ``False`` otherwise.
     """
     return isinstance(target, type)
