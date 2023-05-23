@@ -8,21 +8,24 @@ from ..fundamentals._core import BasicResult
 
 
 class ContinuationFunResult(BasicResult):
-    """Result of each step in parameter continuation
-
-    The class containing the result of a function, which
-    is a sinle step of a parameter continuation.
+    """Result class for the continuation algorithm.
 
     Parameters
     ----------
     success : bool
-        Whether or not that a single step exited successfully.
-    y : numpy.ndarray, float, int, list, tuple, or None
-        Obtained result of a single step.
-    p : dict[str, Any] | None
-        Parameter dictionary.
-    others : dict[str, Any] | None
-        Any other values to return, by default ``None``.
+        Indicates whether the algorithm was successful.
+    y : YC or None
+        Updated value of `y`.
+    p : P or None
+        Updated value of `p`.
+    others : Any or None, optional
+        Additional data associated with the result (default: ``None``).
+
+    See Also
+    --------
+    mappy.continuation.continuation : Perform a continuation algorithm.
+    mappy.typing.YC : Type for ``y`` parameter.
+    mappy.typing.P : Type for ``p`` parameter.
     """
 
     def __init__(
@@ -47,32 +50,42 @@ def continuation(
     resolution: int = 100,
     show_progress: bool = False,
 ) -> list[tuple[YC, P, dict[str, Any] | None]]:
-    """Perform a continuation algorithm to find solutions of a function.
+    """
+    Perform a continuation algorithm to find solutions of a function.
 
-    Parameters:
-        fun : callable
-            A function that takes arguments `y` and `p` and returns a `ContinuationFunResult`.
-        y0 : YC
-            Initial value of `y`.
-        params : P
-            Initial parameter values `p`.
-        end_val : float
-            The end value of the parameter specified by `param_key`.
-        param_key : str
-            The key for the parameter that will be varied during the continuation algorithm.
-        resolution : int, optional
-            The number of steps to perform during the continuation algorithm (default: 100).
-        show_progress : bool, optional
-            Whether to show progress during the algorithm (default: False).
+    Parameters
+    ----------
+    fun : callable
+        A function that takes arguments ``y`` and ``p`` and returns a ``ContinuationFunResult``.
+    y0 : YC
+        Initial value of ``y``.
+    params : P
+        Initial parameter values ``p``.
+    end_val : float
+        The end value of the parameter specified by ``param_key``.
+    param_key : str
+        The key for the parameter that will be varied during the continuation algorithm.
+    resolution : int, optional
+        The number of steps to perform during the continuation algorithm (default: 100).
+    show_progress : bool, optional
+        Whether to show progress during the algorithm (default: ``False``).
 
-    Returns:
-        list[tuple[YC, P, dict[str, Any] | None]]
-            A list of tuples containing the updated `y`, `p`, and additional data (`o`) for each successful step.
+    Returns
+    -------
+    list[tuple[YC, P, dict[str, Any] | None]]
+        A list of tuples containing the updated ``y``, ``p``, and additional data for each successful step.
 
-    Raises:
-        TypeError
-            If the return value of `fun` is not an instance of `ContinuationFunResult`,
-            or if the types of `y` or `p` are not compatible with the initial values.
+    Raises
+    ------
+    TypeError
+        If the return value of ``fun`` is not an instance of ``ContinuationFunResult``,
+        or if the types of ``y`` or ``p`` are not compatible with the initial values.
+
+    See also
+    --------
+    mappy.continuation.ContinuationFunResult : Result class for the continuation algorithm.
+    mappy.typing.YC : Type for ``y`` parameter.
+    mappy.typing.P : Type for ``p`` parameter.
     """
 
     h = (end_val - params[param_key]) / (resolution - 1)
