@@ -26,22 +26,23 @@ def _cond_cycle(
 
 
 class FindCycleResult(BasicResult, Generic[Y]):
-    """Result of finding a periodic cycle
+    """
+    Result of finding a periodic cycle
 
     Parameters
     ----------
     success : bool
-        True if finding is success, or False otherwise.
+        ``True`` if finding is success, or ``False`` otherwise.
     y : numpy.ndarray, float, or None
         Value of ``y`` if available.
     eigvals : numpy.ndarray, float, or None
-        Eigenvalues of the Poincare map at ``y``, if available.
+        Eigenvalues of a diffeomorphism at ``y``, if available.
     eigvecs : numpy.ndarray or None
         Eigenvectors corresponding to ``eigvals`` if available.
     itr : int
-        Count of iterations of the method.
+        Count of iterations elapsed in the method.
     err : numpy.ndarray
-        Error of ``T(y) - y`` in vector form, where ``T`` is the Poincare map.
+        :math:`T(y) - y` in vector form, where :math:`T` is a diffeomorphism.
     """
 
     def __init__(
@@ -68,24 +69,33 @@ def find_cycle(
     period: int = 1,
     m0: str | None = None,
 ) -> FindCycleResult[Y]:
-    """Find a periodic cycle of given map
+    """
+    Find a periodic cycle of given map
 
     Parameters
     ----------
-    poincare_map : PoincareMap
-        Poincare map.
-    y0 : numpy.ndarray or float
+    diff : Diffeomorphism
+        Diffeomorphism representing the map.
+    y0 : Y
         Initial value for a periodic cycle.
-    params : numpy.ndarray, float, or None
-        Parameter array to pass to ``poincare_map``, by default ``None``.
+    params : P or None, optional
+        Parameter array to pass to ``diff``, by default ``None``.
     period : int, optional
         Period of the target periodic cycle, by default ``1``.
+    m0 : str or None, optional
+        Initial condition identifier for PoincareMap, by default ``None``.
 
     Returns
     -------
-    FindCycleResult
-        Instance containing the result of finding calculation
+    FindCycleResult[Y]
+        Instance containing the result of finding calculation.
 
+    See also
+    --------
+    mappy.Diffeomorphism : Class representing a diffeomorphism.
+    mappy.PoincareMap : Class representing a Poincare map.
+    mappy.typing.Y : Type for ``y0`` parameter.
+    mappy.typing.P : Type for ``params`` parameter.
     """
     if isinstance(diff, PoincareMap):
         if m0 is None:
@@ -133,6 +143,43 @@ def trace_cycle(
     show_progress: bool = False,
     m0: str | None = None,
 ) -> list[tuple[numpy.ndarray, P, dict[str, Any] | None]]:
+    """
+    Trace a periodic cycle using the continuation algorithm.
+
+    Parameters
+    ----------
+    diff : Diffeomorphism[Y]
+        Diffeomorphism representing the map.
+    y0 : Y
+        Initial value for the periodic cycle.
+    params : P
+        Initial parameter values.
+    cnt_param_key : str
+        The key for the parameter that will be varied during the continuation algorithm.
+    end_val : float
+        The end value of the parameter specified by ``cnt_param_key``.
+    resolution : int, optional
+        The number of steps to perform during the continuation algorithm (default: 100).
+    period : int, optional
+        Period of the target periodic cycle (default: 1).
+    show_progress : bool, optional
+        Whether to show progress during the algorithm (default: ``False``).
+    m0 : str or None, optional
+        Initial condition identifier for ``PoincareMap``, by default None.
+
+    Returns
+    -------
+    list[tuple[numpy.ndarray, P, dict[str, Any] | None]]
+        A list of tuples containing the updated ``y``, ``p``, and additional data for each successful step.
+
+    See also
+    --------
+    mappy.Diffeomorphism : Class representing a diffeomorphism.
+    mappy.PoincareMap : Class representing a Poincare map.
+    mappy.typing.Y : Type for ``y0`` parameter.
+    mappy.typing.P : Type for ``params`` parameter.
+    """
+
     def lamb(y: numpy.ndarray, p: P | None):
         ret = find_cycle(diff, y, p, period, m0=m0)
         return ContinuationFunResult(
