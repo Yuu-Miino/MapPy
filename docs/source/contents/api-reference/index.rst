@@ -8,6 +8,7 @@ API Reference
     :maxdepth: 2
 
     fundamentals
+    plotting
     root
     continuation
-    tools
+    typing

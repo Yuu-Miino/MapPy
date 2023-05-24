@@ -7,11 +7,13 @@ from numpy import ndarray
 
 from ..typing import Y, P
 from ..fundamentals import (
+    Sol,
+    ModeSol,
+    ModeTraj,
     convert_y_ndarray,
     Diffeomorphism,
     PoincareMap,
 )
-from ..trajectory import Sol, ModeSol, ModeTraj
 
 
 class ColorAlpha:
@@ -115,7 +117,7 @@ def _plot2d(
 
     # Matplotlib initialization
     _input = [convert_y_ndarray(y0), m0, params.copy()]
-    fig, ax, status = init_plot2d(_input[0], _input[2], config)
+    fig, ax, status = _init_plot2d(_input[0], _input[2], config)
 
     def update(_: int):
         sol = solver(*_input)
@@ -175,7 +177,7 @@ def _plot2d(
     pyplot.show()
 
 
-def init_plot2d(
+def _init_plot2d(
     y0: ndarray,
     params: P,
     cfg: Plot2dConfig,
@@ -199,12 +201,12 @@ def init_plot2d(
         "button_press_event",
         lambda event: _on_click(event, cfg, status, y0),
     )
-    draw_axes2d(ax, cfg)
+    _draw_axes2d(ax, cfg)
 
     return (fig, ax, status)
 
 
-def draw_axes2d(ax: Axes, config: Plot2dConfig):
+def _draw_axes2d(ax: Axes, config: Plot2dConfig):
     ax.set_xlim(config.xrange)
     ax.set_ylim(config.yrange)  # type: ignore
     ax.set_xlabel(config.xlabel)
@@ -220,7 +222,7 @@ def _on_key_pressed(
             if event.key == "f":
                 config.only_map = not config.only_map
             on_reset()
-            draw_axes2d(ax, config)
+            _draw_axes2d(ax, config)
         case "p":  # For parameter control
             config.param_idx = (config.param_idx + 1) % len(config.param_keys)
             print(f"changable parameter: {config.param_keys[config.param_idx]}")

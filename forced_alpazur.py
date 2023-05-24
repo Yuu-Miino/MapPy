@@ -2,7 +2,7 @@ import numpy as np
 from sympy import cos
 from mappy import ContinuousMode as CM, DiscreteMode as DM, PoincareMap
 from mappy.root import *
-from mappy.trajectory import mplot2d, Plot2dConfig, ColorAlpha
+from mappy.plot import mplot2d, Plot2dConfig, ColorAlpha
 
 
 @CM.function(3, ["k", "V0", "V", "omega", "g1", "B1"])

@@ -10,6 +10,9 @@ YC = TypeVar(
     "YC", ndarray, float, int, list[float], tuple[float], list[int], tuple[int], tuple
 )
 P: TypeAlias = dict[str, Any]
+Transition: TypeAlias = (
+    dict[str, str | list[str]] | dict[str, str] | dict[str, list[str]]
+)
 
 _T = TypeVar("_T")
 

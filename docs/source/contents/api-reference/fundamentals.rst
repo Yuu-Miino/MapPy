@@ -18,6 +18,29 @@ Mode
     ContinuousMode
     DiscreteMode
 
+
+Trajectory
+----------
+
+.. autosummary::
+    :toctree: generated/
+
+    Traj
+    ModeTraj
+    Sol
+    ModeSol
+
+
+Diffeomorphism
+--------------
+
+.. autosummary::
+    :toctree: generated/
+
+    Diffeomorphism
+    PoincareMap
+
+
 Initial Value Boundary Mode Problem
 -----------------------------------
 
@@ -26,7 +49,7 @@ Initial Value Boundary Mode Problem
 
     solve_ivbmp
     solve_poincare_map
-    PoincareMap
+
 
 Result Classes
 --------------
@@ -37,6 +60,7 @@ Result Classes
     BasicResult
     ModeStepResult
     SolveIvbmpResult
+    DiffeomorphismResult
 
 Exceptions
 ----------
@@ -49,3 +73,12 @@ Exceptions
     TransitionKeyError
     AllModesKeyError
     NextModeNotFoundError
+
+Tools
+-----
+
+.. autosummary::
+    :toctree: generated/
+
+    convert_y_ndarray
+    revert_y_ndarray

@@ -1,6 +1,6 @@
 import numpy as np
 from mappy import DiscreteMode as DM, Diffeomorphism
-from mappy.trajectory import plot2d, Plot2dConfig, ColorAlpha
+from mappy.plot import plot2d, Plot2dConfig, ColorAlpha
 
 
 @DM.function(2, 2, ["a", "b"])

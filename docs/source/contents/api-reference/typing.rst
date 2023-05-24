@@ -19,6 +19,7 @@ TypeVars
     YB
     YC
     P
+    Transition
 
 Type Guard
 ----------

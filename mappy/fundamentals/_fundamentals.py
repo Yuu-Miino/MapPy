@@ -1,6 +1,6 @@
 """Fundamental classes and functions
 """
-from typing import Generic, Literal
+from typing import Generic, Literal, Sequence
 from collections.abc import Callable
 from functools import wraps
 import numpy
@@ -9,8 +9,7 @@ from scipy.integrate import solve_ivp
 numpy.set_printoptions(precision=12)
 import sympy
 from ._core import BasicResult
-from ..typing import Y, YF, YB, P
-from ..trajectory import Sol, ModeSol, ModeTraj
+from ..typing import Y, YF, YB, P, Transition
 
 
 def convert_y_ndarray(y: Y) -> numpy.ndarray:
@@ -34,8 +33,8 @@ def convert_y_ndarray(y: Y) -> numpy.ndarray:
 
     See Also
     --------
-    revert_y_ndarray : Revert a NumPy ndarray back to its original type.
-    mappy.typing.Y : Type alias for ``y``.
+    mappy.revert_y_ndarray : Revert a NumPy ndarray back to its original type.
+    mappy.typing.Y : Type for ``y``.
 
     """
     if isinstance(y, (int, float)):
@@ -74,8 +73,8 @@ def revert_y_ndarray(y: numpy.ndarray, y0: Y) -> Y:
 
     See Also
     --------
-    convert_y_ndarray : Convert the input ``y`` to a NumPy ndarray.
-    mappy.typing.Y : Type alias for ``y``.
+    mappy.convert_y_ndarray : Convert the input ``y`` to a NumPy ndarray.
+    mappy.typing.Y : Type for ``y``.
 
     """
     if isinstance(y0, (int, float)):
@@ -88,8 +87,132 @@ def revert_y_ndarray(y: numpy.ndarray, y0: Y) -> Y:
         raise TypeError(f"Type of y0 is not supported: {type(y0)}")
 
 
+class Traj:
+    """
+    Trajectory of a dynamical system.
+
+    Parameters
+    ----------
+    sol : numpy.ndarray
+        Array representing the trajectory.
+
+    See Also
+    --------
+    mappy.ModeTraj : Represents a mode trajectory.
+
+    """
+
+    def __init__(self, sol: numpy.ndarray) -> None:
+        self.sol = sol
+
+
+class ModeTraj(Traj):
+    """
+    Trajectory of a dynamical system with modes.
+
+    Parameters
+    ----------
+    m0 : str
+        Initial mode name.
+    m1 : str
+        Next mode name.
+    mtype : Literal["C", "D"]
+        Mode type: "C" for continuous mode, "D" for discrete mode.
+    sol : numpy.ndarray
+        Array representing the mode trajectory.
+
+    See Also
+    --------
+    mappy.Traj : Represents a trajectory.
+    mappy.Mode : Represents a mode.
+    mappy.ContinuousMode : Represents a continuous mode.
+    mappy.DiscreteMode : Represents a discrete mode.
+
+    """
+
+    def __init__(
+        self, m0: str, m1: str, mtype: Literal["C", "D"], sol: numpy.ndarray
+    ) -> None:
+        super().__init__(sol)
+        self.m0 = m0
+        self.m1 = m1
+        self.mtype = mtype
+
+
+class Sol:
+    """
+    Bundle of initial value, final value, and trajectory.
+
+    Parameters
+    ----------
+    y0 : Y
+        Initial value.
+    y1 : Y
+        Final value.
+    trajs : list[Traj]
+        List of trajectories.
+
+    See Also
+    --------
+    mappy.ModeSol : Represents a mode solution.
+    mappy.Traj : Represents a trajectory.
+    mappy.typing.Y : Type for ``y0`` and ``y1``.
+
+    """
+
+    def __init__(self, y0: Y, y1: Y, trajs: Sequence[Traj]) -> None:
+        self.y0 = y0
+        self.y1 = y1
+        self.trajs = trajs
+
+
+class ModeSol(Sol):
+    """
+    Solution with mode information.
+
+    Parameters
+    ----------
+    y0 : Y
+        Initial value.
+    m0 : str
+        Initial mode.
+    y1 : Y
+        Final value.
+    m1 : str
+        Final mode.
+    trajs : list[ModeTraj]
+        List of trajectories.
+
+    See Also
+    --------
+    mappy.Sol : Represents a solution.
+    mappy.ModeTraj : Represents a mode trajectory.
+    mappy.typing.Y : Type for ``y0`` and ``y1``.
+
+    """
+
+    def __init__(
+        self,
+        y0: Y,
+        m0: str,
+        y1: Y,
+        m1: str,
+        trajs: list[ModeTraj],
+    ) -> None:
+        self.m0 = m0
+        self.m1 = m1
+        super().__init__(y0, y1, trajs)
+
+
 class TransitionKeyError(Exception):
-    """Exception for the undefined transition"""
+    """Exception raised for an undefined transition.
+
+    Parameters
+    ----------
+    current_mode : str
+        The current mode for which the transition is undefined.
+
+    """
 
     def __init__(self, current_mode: str) -> None:
         self.current_mode = current_mode
@@ -99,7 +222,14 @@ class TransitionKeyError(Exception):
 
 
 class AllModesKeyError(Exception):
-    """Exception for the undefined mode"""
+    """Exception raised for an undefined mode.
+
+    Parameters
+    ----------
+    modename : str
+        The name of the undefined mode.
+
+    """
 
     def __init__(self, modename: str) -> None:
         self.modename = modename
@@ -109,34 +239,41 @@ class AllModesKeyError(Exception):
 
 
 class NextModeNotFoundError(Exception):
-    """Exception that the next mode is not found"""
+    """Exception raised if a next mode is not found."""
 
     def __str__(self) -> str:
         return f"[Next mode] Not found next mode. The ODE solver finished with status ``0``."
 
 
 class ModeStepResult(BasicResult, Generic[Y]):
-    """Result of ``step`` in ``Mode``
+    """Result of a ``step`` in ``Mode``
 
     The ModeStepResult class provides the result of ``step`` in the mode.
 
     Parameters
     ----------
     status : int
-        Response status of ``solve_ivp`` for the continuous mode.
-        ``1`` for the discrete mode.
-    y : numpy.ndarray or float
-        Value of the solution after step.
+        Response status of the continuous mode's solve_ivp method.
+        For the discrete mode, use 1.
+    y : Y
+        Value of the solution after the step.
     tend : float or None, optional
-        Value of the time after step of the continuous-time mode, by default ``None``.
+        Value of the time after the step in the continuous-time mode. Default is None.
     i_border : int or None, optional
-        Index of the border where the trajectory arrives, by default ``None``.
+        Index of the border where the trajectory arrives. Default is None.
     jac : numpy.ndarray, float, or None, optional
-        Value of the Jacobian matrix, by default ``None``.
+        Value of the Jacobian matrix. Default is None.
     hes : numpy.ndarray, float, or None, optional
-        Value of the Hessian tensor, by default ``None``.
-    sol : OdeSolution or None, optional
-        OdeSolution instance of ``solve_ivp`` in the continuous-time mode, by default ``None``.
+        Value of the Hessian tensor. Default is None.
+    sol : numpy.ndarray or None, optional
+        Solution trajectory data of the step. Default is None.
+
+    See Also
+    --------
+    mappy.Mode : Represents a mode.
+    mappy.ContinuousMode : Represents a continuous mode.
+    mappy.DiscreteMode : Represents a discrete mode.
+    mappy.typing.Y : Type for ``y``.
 
     """
 
@@ -162,7 +299,7 @@ class ModeStepResult(BasicResult, Generic[Y]):
 class Mode(Generic[Y, YF]):
     """Base Class of all modes
 
-    The originator class of continuous and discrete modes.
+    The base class for continuous and discrete modes.
 
     Parameters
     ----------
@@ -170,6 +307,16 @@ class Mode(Generic[Y, YF]):
         Name of the mode.
     fun : Callable
         Evolutional function in the mode.
+    mtype : Literal["C", "D"]
+        Type of the mode: "C" for continuous, "D" for discrete.
+    inTraj : bool, optional
+        Flag indicating whether the mode is used in trajectory computation. Default is ``True``.
+
+
+    See Also
+    --------
+    mappy.ContinuousMode : Represents a continuous mode.
+    mappy.DiscreteMode : Represents a discrete mode.
 
     """
 
@@ -237,31 +384,38 @@ class Mode(Generic[Y, YF]):
     def step(self, y0: Y, params: P | None = None, **options) -> ModeStepResult[YF]:
         """Step to the next mode
 
-        The method to operate the step of the ``mode``.
-        The definition depends on the practical type of ``mode``,
-        continuous or discrete.
+        Perform a step in the mode. Default raises ``NotImplemented``.
 
         Parameters
         ----------
-        y0 : numpy.ndarray
-            The initial state to pass to ``fun``.
-        params : Any or None, optional
-            The parameter to pass to ``fun``, by default None.
+        y0 : Y
+            The initial state to pass to the ``fun``.
+        params : P or None, optional
+            The parameter to pass to ``fun``. Default is None.
         **options
-            For future implementation.
+            Additional options for future implementation.
 
         Returns
         -------
-        NotImplementented
+        NotImplemented
+            The method needs to be implemented in the derived classes.
+
+        See Also
+        --------
+        mappy.ModeStepResult : Represents the result of the step.
+        mappy.typing.Y : Type for ``y0``.
+        mappy.typing.YF : Type for the return value of ``fun``.
+        mappy.typing.P : Type for ``params``.
+
         """
 
         return NotImplemented
 
 
 class ContinuousMode(Mode[Y, YF]):
-    """Mode for the continuos-time dynamical system
+    """Mode for the continuous-time dynamical system
 
-    The class to define the mode for continuos-time dynamical systems.
+    The class to define the mode for continuous-time dynamical systems.
 
     Parameters
     ----------
@@ -277,6 +431,8 @@ class ContinuousMode(Mode[Y, YF]):
     max_interval : float, optional
         Max interval of the time span, by default ``20``.
         The function ``solve_ivp`` of SciPy takes ``t_span = [0, max_interval]``.
+    inTraj : bool, optional
+        Flag indicating whether the mode is included in the trajectory. Defaults to ``True``.
 
     """
 
@@ -396,21 +552,21 @@ class ContinuousMode(Mode[Y, YF]):
 
     @classmethod
     def function(cls, dimension: int, param_keys: list[str] = []) -> Callable:
-        """Decorator for ``fun`` in ``ContinuousTimeMode``
+        """Decorator for ``fun`` in ``ContinuousMode``
 
-        The method provides the decorator for ``fun`` in ``ContinuousTimeMode``.
+        The method provides the decorator for ``fun`` in ``ContinuousMode``.
 
         Parameters
         ----------
         dimension : int
             Dimension of the state space of the system.
-        param_keys : list[str]
-            List of keys for the parameters used in ``fun``, by default ``[]``.
+        param_keys : list[str], optional
+            List of keys for the parameters used in `fun`, by default `[]`.
 
         Returns
         -------
         Callable
-            Decorated ``fun`` function compatible with ``fun`` in ``ContinousTimeMode``
+            Decorated `fun` function compatible with `fun` in `ContinuousMode`
 
         See also
         --------
@@ -426,7 +582,7 @@ class ContinuousMode(Mode[Y, YF]):
             \\deriv{v}{t} &= 0.04 v^2 + 5 v + 140 - u + I, \\\\
             \\deriv{u}{t} &= a(bv-u)
 
-        The equivalent description for the system by ``mappy`` is as follows.
+        The following code defines the system as a function compatible with ``ContinuousMode``.
 
         .. code-block:: python
 
@@ -447,6 +603,26 @@ class ContinuousMode(Mode[Y, YF]):
             # `izhikevich` is compatible with ContinuousMode class
             mode1 = CM(name = 'mode1', fun = izhikevich)
 
+        Without the decorator, the function ``izhikevich`` becomes to be compatible if it has the special attributes
+        as follows.
+
+        .. code-block:: python
+
+            def izhikevich (y, param):
+                v, u = y
+                a = param['a']
+                b = param['b']
+                I = param['I']
+
+                return np.array([
+                    0.04 * (v ** 2) + 5.0 * v + 140.0 - u + I,
+                    a * (b * v - u)
+                ])
+            izhikevich.dom_dim = 2
+            izhikevich.param_keys = ['a', 'b', 'I']
+
+            # `izhikevich` is compatible with ContinuousMode class
+            mode1 = CM(name = 'mode1', fun = izhikevich)
         """
 
         def _decorator(fun: Callable[[Y, P], YF]) -> Callable[[Y, P], YF]:
@@ -463,9 +639,9 @@ class ContinuousMode(Mode[Y, YF]):
 
     @classmethod
     def border(cls, direction: int = 1) -> Callable:
-        """Decorator for the element of ``borders`` in ``ContinuousTimeMode``
+        """Decorator for the element of ``borders`` in ``ContinuousMode``
 
-        The method providing the decorator for a element of ``borders`` in ``ContinuousTimeMode``.
+        The method providing the decorator for a element of ``borders`` in ``ContinuousMode``.
         The calling signature is ``border(y, p | None)`` and it should be the same one as ``fun``.
 
         Parameters
@@ -478,7 +654,7 @@ class ContinuousMode(Mode[Y, YF]):
         Returns
         -------
         Callable
-            Decorated ``border`` function compatible with ``ContinuousTimeMode``
+            Decorated ``border`` function compatible with ``ContinuousMode``
 
         Examples
         --------
@@ -516,7 +692,7 @@ class ContinuousMode(Mode[Y, YF]):
             def my_border_fun (y: float, _):
                 return y - 10
 
-        .. warning::
+        .. note::
 
             In the last example, ``my_border_fun`` does not use parameter.
             However it should implement the argument place to input parameter
@@ -557,12 +733,22 @@ class ContinuousMode(Mode[Y, YF]):
         calc_hes : Boolean, optional
             Flag to calculate the Hessian matrix of the map from initial value to the result y, by default ``True``.
             If ``True``, calc_jac is automatically set to ``True``.
+        dense_output : Boolean, optional
+            Flag to calculate the dense output, by default ``False``.
         **options
             The options of ``solve_ivp`` in ``scipy.integrate``.
 
         Returns
         -------
         ModeStepResult
+            The result of the step
+
+        See also
+        --------
+        mappy.ModeStepResult : The result of the step
+        mappy.typing.Y : Type of the state vector
+        mappy.typing.P : Type of the parameter dictionary
+
         """
 
         # Replace the function for ODE and borders with the compatible forms
@@ -713,6 +899,15 @@ class DiscreteMode(Mode[Y, YF]):
         Name of the mode.
     fun : Callable
         Right-hand side of the discrete-time dynamical system. The calling signature is fun(y).
+    inTraj : bool, optional
+        If ``True``, the mode is included in the trajectory, by default ``False``.
+
+    See Also
+    --------
+    mappy.typing.Y : Type of the domain of the function ``fun``.
+    mappy.typing.YF : Type of the codomain of the function ``fun``.
+    mappy.typing.P : Type of the parameters of the function ``fun``.
+
     """
 
     def __init__(
@@ -724,9 +919,9 @@ class DiscreteMode(Mode[Y, YF]):
     def function(
         cls, domain_dimension: int, codomain_dimension: int, param_keys: list[str] = []
     ) -> Callable:
-        """Decorator for ``fun`` in ``DiscreteTimeMode``
+        """Decorator for ``fun`` in ``DiscreteMode``
 
-        Decorator for ``fun`` in ``DiscreteTimeMode``
+        Decorator for ``fun`` in ``DiscreteMode``
 
         Parameters
         ----------
@@ -738,7 +933,57 @@ class DiscreteMode(Mode[Y, YF]):
         Returns
         -------
         Callable
-            Decorated function compatible with ``DiscreteTimeMode``
+            Decorated function compatible with ``DiscreteMode``
+
+        See Also
+        --------
+        mappy.DiscreteMode
+
+        Examples
+        --------
+        The Henon map is a discrete-time dynamical system defined in
+        the 2-dimensional Euclidean space.
+
+        .. math::
+            x_{n+1} &= 1 - ax_n^2 + y_n, \\\\
+            y_{n+1} &= bx_n
+
+        The following code defines the Henon map as a function compatible with ``DiscreteMode``.
+
+        .. code-block:: python
+
+            from mappy import DiscreteMode as DM
+
+            @DM.function(domain_dimension = 2, codomain_dimension = 2, param_keys = ["a", "b"])
+            def henon(vect_x, param):
+                x, y = vect_x
+                a = param["a"]
+                b = param["b"]
+
+                return numpy.array([1 - a * x**2 + y, b * x])
+
+            # `henon` is compatible with `DiscreteMode` class
+            mode1 = DM(name = "mode1", fun = henon)
+
+        Without the decorator, the function ``henon`` becomes to be compatible if it has the special attributes
+        as follows.
+
+        .. code-block:: python
+
+            def henon(vect_x, param):
+                x, y = vect_x
+                a = param["a"]
+                b = param["b"]
+
+                return numpy.array([1 - a * x**2 + y, b * x])
+
+            henon.dom_dim = 2
+            henon.cod_dim = 2
+            henon.param_keys = ["a", "b"]
+
+            # `henon` is compatible with `DiscreteMode` class
+            mode1 = DM(name = "mode1", fun = henon)
+
         """
 
         def _decorator(fun: Callable[[Y, P], YF]) -> Callable[[Y, P], YF]:
@@ -778,6 +1023,15 @@ class DiscreteMode(Mode[Y, YF]):
         Returns
         -------
         ModeStepResult
+            Result of the step.
+
+
+        See Also
+        --------
+        mappy.ModeStepResult
+        mappy.typing.Y : Type of the domain of the function ``fun``.
+        mappy.typing.YF : Type of the codomain of the function ``fun``.
+        mappy.typing.P : Type of the parameters of the function ``fun``.
 
         """
         ## Setup
@@ -843,6 +1097,31 @@ class DiscreteMode(Mode[Y, YF]):
 
 
 class DiffeomorphismResult(BasicResult, Generic[Y]):
+    """Result of ``solve_ivp``
+
+    Parameters
+    ----------
+    y : Y
+        Value of the solution at the final time.
+    jac : numpy.ndarray | float | None, optional
+        Value of the Jacobian matrix at the final time, by default ``None``.
+    eigvals : Y | None, optional
+        Eigenvalues of the Jacobian at the final time, by default ``None``.
+    eigvecs : numpy.ndarray | float | None, optional
+        Eigenvectors of the Jacobian at the final time, by default ``None``.
+    hes : numpy.ndarray | float | None, optional
+        Value of the Hessian matrix at the final time, by default ``None``.
+    sol : Sol | None, optional
+        Solution trajectory, by default ``None``.
+
+    See Also
+    --------
+    mappy.Diffeomorphism : Class of the diffeomorphism.
+    mappy.typing.Y : Type of the domain of the function ``fun``.
+    mappy.Sol : Class of the solution trajectory.
+
+    """
+
     def __init__(
         self,
         y: Y,
@@ -867,18 +1146,28 @@ class SolveIvbmpResult(DiffeomorphismResult, Generic[Y]):
 
     Parameters
     ----------
-    y : numpy.ndarray or float
-        The value of state after mapping.
+    y : Y
+        Value of the solution at the final time.
     trans_history : list[str]
-        Transition history of the modes by index of ``all_modes``.
-    jac : numpy.ndarray, float, or None, optional
-        Jacobian matrix of the map, by default ``None``.
-    eigvals : numpy.ndarray, float or None, optional
-        Eigenvalues of the Jacobian matrix, by default ``None``.
-    eigvecs : numpy.ndarray or None, optional
-        Eigenvectors corresponding to ``eigvals``, by default ``None``.
-    hes : numpy.ndarray, float, or None, optional
-        Hessian tensor of the map, by default ``None``.
+        List of the transition history.
+    jac : numpy.ndarray | float | None, optional
+        Value of the Jacobian matrix at the final time, by default ``None``.
+    eigvals : Y | None, optional
+        Eigenvalues of the Jacobian at the final time, by default ``None``.
+    eigvecs : numpy.ndarray | float | None, optional
+        Eigenvectors of the Jacobian at the final time, by default ``None``.
+    hes : numpy.ndarray | float | None, optional
+        Value of the Hessian matrix at the final time, by default ``None``.
+    sol : ModeSol | None, optional
+        Solution trajectory, by default ``None``.
+
+    See Also
+    --------
+    mappy.Diffeomorphism : Class of the diffeomorphism.
+    mappy.typing.Y : Type of the domain of the function ``fun``.
+    mappy.ModeSol : Class of the solution trajectory with mode.
+    mappy.typing.Y : Type of the domain of the function ``fun``.
+
     """
 
     def __init__(
@@ -924,34 +1213,43 @@ def solve_ivbmp(
 ) -> SolveIvbmpResult[Y]:
     """Solve the initial value and boundary modes problem of the hybrid dynamical system
 
-    Solve the initial value and boundary modes problem of the hybrid dynamical system
+    Solve the initial value and boundary modes problem of the hybrid dynamical system.
 
     Parameters
     ----------
-    y0 : numpy.ndarray or float
-        Initial value y0.
-    all_modes : tuple of Modes
-        Set of all modes.
-    trans : dict
-        Transition function that maps from ``current mode`` to ``next mode``.
-    initial_mode : str
-        Name of the initial mode.
-    m1 : Mode or None, optional
-        Name of the end mode, by default ``None``. If ``None``, the end mode in the method is the same as ``initial_mode``.
+    y0 : Y
+        Initial state of the system.
+    all_modes : tuple[Mode, ...]
+        Tuple containing all modes of the hybrid dynamical system.
+    trans : dict[str, str | list[str]]
+        Dictionary defining the mode transitions in the hybrid system.
+    m0 : str
+        Initial mode name of the system.
+    m1 : str | list[str] | None, optional
+        Final mode(s) name of the system, by default None.
     calc_jac : bool, optional
-        Flag to calculate the Jacobian matrix, by default ``True``.
+        Flag indicating whether to calculate the Jacobian matrix, by default True.
     calc_hes : bool, optional
-        Flag to calculate the Hessian tensor, by default ``True``.
-    params : Parameter, optional
-        Parameter to pass to ``fun`` in all ``mode``, by default ``None``.
+        Flag indicating whether to calculate the Hessian matrix, by default False.
+    params : P | None, optional
+        Dictionary of parameter values for the system, by default None.
     rtol : float, optional
-        Relative torelance to pass to ``solve_ivp``, by default ``1e-6``.
+        Relative tolerance for the solver, by default 1e-6.
     map_count : int, optional
-        Count of maps, by default ``1``.
+        Number of mapping iterations to perform, by default 1.
+    dense_output : bool, optional
+        Flag indicating whether to use dense output, by default False.
 
     Returns
     -------
-    SolveIvbmpResult
+    SolveIvbmpResult[Y]
+        Object containing the solution of the initial value and boundary modes problem.
+
+    See Also
+    --------
+    mappy.Mode : Class of the mode.
+    mappy.typing.Y : Type of the domain of the function ``fun``.
+    mappy.typing.P : Type of the parameter dictionary.
 
     """
 
@@ -986,10 +1284,35 @@ def solve_ivbmp(
 
 
 class Diffeomorphism(Generic[Y]):
+    """Class of the diffeomorphism
+
+    Class of the diffeomorphism.
+
+    Parameters
+    ----------
+    name : str
+        Name of the mode.
+    fun : Callable
+        Function of the discrete mode.
+
+    See Also
+    --------
+    mappy.DiscreteMode : Class of the discrete mode.
+
+    """
+
     def __init__(self, name: str, fun: Callable):
         self.dm = DiscreteMode(name, fun, inTraj=True)
 
     def dimension(self):
+        """Return the dimension of the domain of the function ``fun``.
+
+        Returns
+        -------
+        int
+            Dimension of the domain of the function ``fun``.
+
+        """
         return self.dm.fun.dom_dim
 
     def image_detail(
@@ -1000,6 +1323,38 @@ class Diffeomorphism(Generic[Y]):
         calc_jac: bool = True,
         calc_hes: bool = True,
     ) -> DiffeomorphismResult[Y]:
+        """Image of the diffeomorphism with detail information.
+
+        Parameters
+        ----------
+        y0 : Y
+            Value of the domain of the function ``fun``.
+        params : P | None, optional
+            Value of the parameter dictionary, by default ``None``.
+        iterations : int, optional
+            Iteration count of the diffeomorphism, by default 1.
+        calc_jac : bool, optional
+            Flag indicating whether to calculate the Jacobian matrix, by default ``True``.
+        calc_hes : bool, optional
+            Flag indicating whether to calculate the Hessian matrix, by default ``True``.
+
+        Returns
+        -------
+        DiffeomorphismResult[Y]
+            Object containing the image of the diffeomorphism with detail information.
+
+        Raises
+        ------
+        ValueError
+            If ``iterations`` is less than 1.
+
+        See Also
+        --------
+        mappy.DiffeomorphismResult : Class of the result of the diffeomorphism.
+        mappy.typing.Y : Type of the domain of the function ``fun``.
+        mappy.typing.P : Type of the parameter dictionary.
+
+        """
         if iterations < 1:
             raise ValueError("iterations must be greater than or equal to 1.")
 
@@ -1037,37 +1392,94 @@ class Diffeomorphism(Generic[Y]):
         params: P | None = None,
         iterations: int = 1,
     ) -> Y:
+        """Image of the diffeomorphism.
+
+        Parameters
+        ----------
+        y0 : Y
+            Value of the domain of the function ``fun``.
+        params : P | None, optional
+            Value of the parameter dictionary, by default ``None``.
+        iterations : int, optional
+            Iteration count of the diffeomorphism, by default 1.
+
+        Returns
+        -------
+        Y
+            Image of the diffeomorphism.
+
+        Raises
+        ------
+        ValueError
+            If ``iterations`` is less than 1.
+
+        See Also
+        --------
+        mappy.typing.Y : Type of the domain of the function ``fun``.
+        mappy.typing.P : Type of the parameter dictionary.
+
+        """
+
         ret = self.image_detail(y0, params, iterations, False, False)
         return ret.y
 
     def traj(self, y0: Y, params: P | None = None, iterations: int = 1) -> Sol | None:
+        """Trajectory of the diffeomorphism.
+
+        Parameters
+        ----------
+        y0 : Y
+            Value of the domain of the function ``fun``.
+        params : P | None, optional
+            Value of the parameter dictionary, by default ``None``.
+        iterations : int, optional
+            Iteration count of the diffeomorphism, by default 1.
+
+        Returns
+        -------
+        Sol | None
+            Trajectory of the diffeomorphism.
+
+        Raises
+        ------
+        ValueError
+            If ``iterations`` is less than 1.
+
+        See Also
+        --------
+        mappy.typing.Y : Type of the domain of the function ``fun``.
+        mappy.typing.P : Type of the parameter dictionary.
+
+        """
+
         ret = self.image_detail(y0, params, iterations, False, False)
         return ret.sol
 
 
 class PoincareMap(Diffeomorphism, Generic[Y]):
-    """Construct Poincare map
-
-    Construct Poincare map
+    """Class of the Poincare map.
 
     Parameters
     ----------
     all_modes : tuple[Mode, ...]
-        Tuple containing all modes.
-    trans : dict[str, str  |  list[str]]
-        Dictionary defining transition rule.
-    initial_mode : str
-        Initial mode of the Poincare map.
-    calc_jac : bool, optional
-        Flag to calculate Jacobian matrix of the map, by default ``False``.
-    calc_hes : bool, optional
-        Flag to calculate Hessian matrix of the map, by default ``False``.
+        Tuple of all modes.
+    trans : Transition
+        Dictionary of the transition modes.
+    m1 : str | list[str] | None, optional
+        Name of the final mode, by default ``None``.
+
+    See Also
+    --------
+    mappy.Diffeomorphism : Class of the diffeomorphism.
+    mappy.Mode : Class of the mode.
+    mappy.typing.Transition : Class of the transition modes.
+
     """
 
     def __init__(
         self,
         all_modes: tuple[Mode, ...],
-        trans: dict[str, str | list[str]] | dict[str, str] | dict[str, list[str]],
+        trans: Transition,
         m1: str | list[str] | None = None,
         **options,
     ) -> None:
@@ -1076,7 +1488,25 @@ class PoincareMap(Diffeomorphism, Generic[Y]):
         self.options = options
         self.m1 = m1
 
-    def dimension(self, m0: str):
+    def dimension(self, m0: str) -> int:
+        """Return the dimension of the domain of the function ``fun``.
+
+        Parameters
+        ----------
+        m0 : str
+            Name of the target mode.
+
+        Returns
+        -------
+        int
+            Dimension of the domain of the function ``fun``.
+
+        Raises
+        ------
+        ValueError
+            If ``m0`` is not in ``all_modes``.
+
+        """
         if m0 not in [_m.name for _m in self.all_modes]:
             raise ValueError(f"{m0} is not in all_modes.")
         return self.all_modes[[_m.name for _m in self.all_modes].index(m0)].fun.dom_dim
@@ -1090,19 +1520,27 @@ class PoincareMap(Diffeomorphism, Generic[Y]):
         calc_jac: bool = True,
         calc_hes: bool = True,
     ) -> SolveIvbmpResult[Y]:
-        """Calculate image of the Poincare map with detailed information
+        """Return the image of the Poincare map with detail information.
 
         Parameters
         ----------
-        y0 : numpy.ndarray or float
-            Initial state.
+        y0 : Y
+            Value of the domain of the function ``fun``.
+        m0 : str
+            Name of the initial mode.
+        params : P | None, optional
+            Value of the parameter dictionary, by default ``None``.
         iterations : int, optional
-            Count of iterations of the map, by default ``1``.
+            Iteration count of the Poincare map, by default 1.
+        calc_jac : bool, optional
+            Whether to calculate the Jacobian matrix, by default ``True``.
+        calc_hes : bool, optional
+            Whether to calculate the Hessian matrix, by default ``True``.
 
         Returns
         -------
-        SolveIvbmpResult
-            Result of calculation.
+        SolveIvbmpResult[Y]
+            Result of the Poincare map.
         """
         slv = solve_poincare_map(
             y0,
@@ -1125,19 +1563,23 @@ class PoincareMap(Diffeomorphism, Generic[Y]):
         params: P | None = None,
         iterations: int = 1,
     ) -> Y:
-        """Calculate image of the Poincare map
+        """Image of the Poincare map.
 
         Parameters
         ----------
-        y0 : numpy.ndarray | float
-            Element to calculate the image under the Poincare map.
+        y0 : Y
+            Value of the domain of the function ``fun``.
+        m0 : str
+            Name of the initial mode.
+        params : P | None, optional
+            Value of the parameter dictionary, by default ``None``.
         iterations : int, optional
-            Count of the iteration of the map, by default ``1``.
+            Iteration count of the Poincare map, by default 1.
 
         Returns
         -------
-        numpy.ndarray | float
-            The image of y0 under the map.
+        Y
+            Image of the Poincare map.
         """
         slv = self.image_detail(y0, m0, params, iterations, False, False)
         return slv.y
@@ -1149,6 +1591,25 @@ class PoincareMap(Diffeomorphism, Generic[Y]):
         params: P | None = None,
         iterations: int = 1,
     ) -> Sol | None:
+        """Trajectory of the Poincare map.
+
+        Parameters
+        ----------
+        y0 : Y
+            Value of the domain of the function ``fun``.
+        m0 : str
+            Name of the mode.
+        params : P | None, optional
+            Value of the parameter dictionary, by default ``None``.
+        iterations : int, optional
+            Iteration count of the Poincare map, by default 1.
+
+        Returns
+        -------
+        Sol | None
+            Trajectory of the Poincare map.
+        """
+
         slv = self.image_detail(y0, m0, params, iterations, False, False)
         return slv.sol
 
@@ -1156,7 +1617,7 @@ class PoincareMap(Diffeomorphism, Generic[Y]):
 def solve_poincare_map(
     y0: Y,
     all_modes: tuple[Mode, ...],
-    trans: dict[str, str | list[str]] | dict[str, str] | dict[str, list[str]],
+    trans: Transition,
     m0: str,
     m1: str | list[str] | None = None,
     calc_jac: bool = True,
@@ -1166,36 +1627,38 @@ def solve_poincare_map(
     map_count: int = 1,
     dense_output: bool = True,
 ) -> SolveIvbmpResult[Y]:
-    """Solve the initial value and boundary modes problem of the hybrid dynamical system
-
-    Solve the initial value and boundary modes problem of the hybrid dynamical system
+    """Solve the Poincare map.
 
     Parameters
     ----------
-    y0 : numpy.ndarray or float
-        Initial value y0.
-    all_modes : tuple of Modes
-        Set of all modes.
-    trans : dict
-        Transition function that maps from ``current mode`` to ``next mode``.
-    initial_mode : str
+    y0 : Y
+        Value of the domain of the function ``fun``.
+    all_modes : tuple[Mode, ...]
+        Tuple of all modes.
+    trans : Transition
+        Dictionary of the transition modes.
+    m0 : str
         Name of the initial mode.
-    m1 : Mode or None, optional
-        Name of the end mode, by default ``None``. If ``None``, the end mode in the method is the same as ``initial_mode``.
+    m1 : str | list[str] | None, optional
+        Name(s) of the final mode, by default ``None``.
     calc_jac : bool, optional
-        Flag to calculate the Jacobian matrix, by default ``True``.
+        Whether to calculate the Jacobian matrix, by default ``True``.
     calc_hes : bool, optional
-        Flag to calculate the Hessian tensor, by default ``True``.
-    params : Parameter, optional
-        Parameter to pass to ``fun`` in all `mode`, by default ``None``.
+        Whether to calculate the Hessian matrix, by default ``False``.
+    params : P | None, optional
+        Value of the parameter dictionary, by default ``None``.
     rtol : float, optional
-        Relative torelance to pass to ``solve_ivp``, by default ``1e-6``.
+        Relative tolerance, by default 1e-6.
     map_count : int, optional
-        Count of maps, by default ``1``.
+        Iteration count of the Poincare map, by default 1.
+    dense_output : bool, optional
+        Whether to calculate the dense output, by default ``True``.
+
 
     Returns
     -------
-    SolveIvbmpResult
+    SolveIvbmpResult[Y]
+        Result of the Poincare map.
 
     """
     _y0 = convert_y_ndarray(y0)

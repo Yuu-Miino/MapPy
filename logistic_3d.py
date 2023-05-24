@@ -1,7 +1,7 @@
 import numpy as np
 from mappy import DiscreteMode as DM, Diffeomorphism
 from mappy.root import find_cycle, trace_cycle, find_local_bf, trace_local_bf
-from mappy.trajectory import plot2d, Plot2dConfig, ColorAlpha
+from mappy.plot import plot2d, Plot2dConfig, ColorAlpha
 import matplotlib.pyplot as plt
 
 

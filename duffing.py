@@ -2,7 +2,7 @@ import numpy as np
 from mappy import ContinuousMode as CM, DiscreteMode as DM, PoincareMap
 from mappy.root import *
 from sympy import cos
-from mappy.trajectory import mplot2d, Plot2dConfig
+from mappy.plot import mplot2d, Plot2dConfig
 
 
 @CM.function(dimension=3, param_keys=["k", "B0", "B"])
