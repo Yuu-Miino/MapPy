@@ -10,9 +10,34 @@ numpy.set_printoptions(precision=12)
 import sympy
 from ._core import BasicResult
 from ..typing import Y, YF, YB, P
+from ..trajectory import Sol, ModeSol, ModeTraj
 
 
 def convert_y_ndarray(y: Y) -> numpy.ndarray:
+    """
+    Convert the input ``y`` to a NumPy ndarray.
+
+    Parameters
+    ----------
+    y : int, float, list, tuple, or numpy.ndarray
+        Input value to be converted.
+
+    Returns
+    -------
+    numpy.ndarray
+        Converted value as a NumPy ndarray.
+
+    Raises
+    ------
+    TypeError
+        If the type of ``y`` is not supported.
+
+    See Also
+    --------
+    revert_y_ndarray : Revert a NumPy ndarray back to its original type.
+    mappy.typing.Y : Type alias for ``y``.
+
+    """
     if isinstance(y, (int, float)):
         return numpy.array([y], dtype=numpy.floating)
     elif isinstance(y, (list, tuple)):
@@ -27,6 +52,32 @@ def convert_y_ndarray(y: Y) -> numpy.ndarray:
 
 
 def revert_y_ndarray(y: numpy.ndarray, y0: Y) -> Y:
+    """
+    Revert the NumPy ndarray ``y`` back to its original type.
+
+    Parameters
+    ----------
+    y : numpy.ndarray
+        NumPy ndarray to be reverted.
+    y0 : int, float, list, tuple, or numpy.ndarray
+        Original value type of ``y``.
+
+    Returns
+    -------
+    int, float, list, tuple, or numpy.ndarray
+        Reverted value of ``y`` with the original type.
+
+    Raises
+    ------
+    TypeError
+        If the type of ``y0`` is not supported.
+
+    See Also
+    --------
+    convert_y_ndarray : Convert the input ``y`` to a NumPy ndarray.
+    mappy.typing.Y : Type alias for ``y``.
+
+    """
     if isinstance(y0, (int, float)):
         return y[0].item()
     elif isinstance(y0, (list, tuple)):
@@ -35,28 +86,6 @@ def revert_y_ndarray(y: numpy.ndarray, y0: Y) -> Y:
         return y.copy()
     else:
         raise TypeError(f"Type of y0 is not supported: {type(y0)}")
-
-
-class Traj:
-    def __init__(self, sol: numpy.ndarray) -> None:
-        self.sol = sol
-
-
-class ModeTraj(Traj):
-    def __init__(
-        self, m0: str, m1: str, mtype: Literal["C", "D"], sol: numpy.ndarray
-    ) -> None:
-        self.m0 = m0
-        self.m1 = m1
-        self.mtype = mtype
-        super().__init__(sol)
-
-
-class Sol:
-    def __init__(self, y0: Y, y1: Y, trajs: list[Traj]) -> None:
-        self.y0 = y0
-        self.y1 = y1
-        self.trajs = trajs
 
 
 class TransitionKeyError(Exception):
@@ -227,20 +256,6 @@ class Mode(Generic[Y, YF]):
         """
 
         return NotImplemented
-
-
-class ModeSol(Sol):
-    def __init__(
-        self,
-        y0: Y,
-        m0: str,
-        y1: Y,
-        m1: str,
-        trajs: list[Traj],
-    ) -> None:
-        self.m0 = m0
-        self.m1 = m1
-        super().__init__(y0, y1, trajs)
 
 
 class ContinuousMode(Mode[Y, YF]):

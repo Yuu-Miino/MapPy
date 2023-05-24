@@ -1,7 +1,7 @@
 import numpy as np
 from mappy import ContinuousMode as CM, DiscreteMode as DM, PoincareMap
 from mappy.root import *
-from mappy.tools import mplot2d, Plot2dConfig, ColorAlpha
+from mappy.trajectory import mplot2d, Plot2dConfig, ColorAlpha
 
 
 ## Izhikevich neuron model

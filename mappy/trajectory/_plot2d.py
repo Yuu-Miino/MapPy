@@ -1,4 +1,4 @@
-from typing import Callable, Any, Literal
+from typing import Callable, Literal
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 from matplotlib.backend_bases import MouseEvent, KeyEvent
@@ -7,13 +7,11 @@ from numpy import ndarray
 
 from ..typing import Y, P
 from ..fundamentals import (
-    Sol,
-    ModeSol,
-    ModeTraj,
     convert_y_ndarray,
     Diffeomorphism,
     PoincareMap,
 )
+from ..trajectory import Sol, ModeSol, ModeTraj
 
 
 class ColorAlpha:
