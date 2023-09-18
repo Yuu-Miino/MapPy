@@ -1,17 +1,29 @@
 .. _tools:
 
-.. module:: mappy.tools
+.. module:: mappy.typing
 
-=====
-Tools
-=====
+======
+Typing
+======
 
-.. currentmodule:: mappy.tools
+.. currentmodule:: mappy.typing
 
-Classes
--------
+TypeVars
+--------
 
 .. autosummary::
     :toctree: generated/
 
-    DictVector
+    Y
+    YF
+    YB
+    YC
+    P
+
+Type Guard
+----------
+
+.. autosummary::
+    :toctree: generated/
+
+    is_type_of

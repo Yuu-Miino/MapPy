@@ -8,4 +8,6 @@ API Reference
     :maxdepth: 2
 
     fundamentals
+    root
+    continuation
     tools
