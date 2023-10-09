@@ -57,35 +57,44 @@ def main():
         param_idx=0,
     )
 
-    mplot2d(pmap, y0, "p", param, config=config)
+    run_mode = "fix_trace"
 
-    """ print(pmap.image_detail(y0, "p", params=param))
-
-    ret = trace_cycle(
-        poincare_map=pmap,
-        y0=y0,
-        params=param,
-        period=1,
-        cnt_param_idx="B",
-        end_val=0.17,
-        show_progress=True,
-        resolution=10,
-    )
-
-    yb, paramb = ret[-1][0:2]
-    ret_lbf = trace_local_bf(
-        poincare_map=pmap,
-        y0=yb,
-        params=paramb,
-        bf_param_idx="B0",
-        theta=np.pi,
-        cnt_param_idx="B",
-        end_val=0.35,
-        period=1,
-        resolution=100,
-        show_progress=True,
-    )
-    print(len(ret_lbf)) """
+    if run_mode == "traj":
+        mplot2d(pmap, y0, "p", param, config=config)
+    elif run_mode == "fix_trace":
+        ret = trace_cycle(
+            diff=pmap,
+            y0=y0,
+            m0="p",
+            params=param,
+            period=1,
+            cnt_param_key="B",
+            end_val=0.375,
+            show_progress=True,
+            resolution=50,
+        )
+        pxy = np.array(
+            [[r[1]["B0"], r[1]["B"], *r[0], *r[2]["eigvals"]] for r in ret],
+            dtype=np.floating,
+        )
+        np.savetxt("duffing_fix_trace.csv", pxy, delimiter=",")
+    elif run_mode == "bf_Trace":
+        ret_lbf = trace_local_bf(
+            diff=pmap,
+            y0=y0,
+            m0="p",
+            params=param,
+            bf_param_key="B0",
+            theta=np.pi,
+            cnt_param_key="B",
+            end_val=0.35,
+            period=1,
+            resolution=100,
+            show_progress=True,
+        )
+        print(len(ret_lbf))
+    else:
+        pass
 
 
 if __name__ == "__main__":

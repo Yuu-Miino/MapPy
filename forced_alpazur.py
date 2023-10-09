@@ -74,15 +74,15 @@ def p_inv(y, _):
 
 
 def main():
-    y0 = np.array([-7.739219543281, -0.188608176591])
+    y0 = np.array([-5.257964200092907214e-01, -3.313731957406108042e-01])
     param = {
         "k": 0.1,
         "g1": 0.2,
         "g2": 2.0,
-        "B1": 1.3,
+        "B1": -4.986997117254979989e-02,
         "B2": 5,
         "V0": 0,
-        "V": 2.4,
+        "V": 2.5,
         "omega": 1.26,
     }
 
@@ -127,36 +127,27 @@ def main():
         },
     )
 
-    mplot2d(pmap, y0, "p1", param, config)
+    run_mode = "bf_trace"
 
-    """ print(pmap.image_detail(y0, param))
+    if run_mode == "traj":
+        mplot2d(pmap, y0, "p1", param, config)
+    elif run_mode == "bf_trace":
+        print(pmap.image_detail(y0, m0="p1", params=param))
 
-    ret = trace_cycle(
-        poincare_map=pmap,
-        y0=y0,
-        params=param,
-        period=2,
-        cnt_param_idx="B1",
-        end_val=7.7,
-        show_progress=True,
-        resolution=10,
-    )
-
-    yb, paramb = ret[-1][0:2]
-
-    ret_lbf = trace_local_bf(
-        poincare_map=pmap,
-        y0=yb,
-        params=paramb,
-        bf_param_idx="B1",
-        theta=np.pi,
-        cnt_param_idx="V",
-        end_val=3,
-        period=1,
-        resolution=100,
-        show_progress=True,
-    )
-    print(len(ret_lbf)) """
+        ret_lbf = trace_local_bf(
+            diff=pmap,
+            y0=y0,
+            m0="p1",
+            params=param,
+            bf_param_key="B1",
+            theta=np.pi,
+            cnt_param_key="V",
+            end_val=3,
+            period=1,
+            resolution=100,
+            show_progress=True,
+        )
+        print(len(ret_lbf))
 
 
 if __name__ == "__main__":

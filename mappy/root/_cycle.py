@@ -132,7 +132,7 @@ def trace_cycle(
     period: int = 1,
     show_progress: bool = False,
     m0: str | None = None,
-) -> list[tuple[numpy.ndarray, P, dict[str, Any] | None]]:
+) -> list[tuple[numpy.ndarray, P, dict[str, Any]]]:
     def lamb(y: numpy.ndarray, p: P | None):
         ret = find_cycle(diff, y, p, period, m0=m0)
         return ContinuationFunResult(
@@ -148,7 +148,7 @@ def trace_cycle(
         )
 
     _y0 = convert_y_ndarray(y0)
-    return continuation(
+    _ret = continuation(
         lamb,
         _y0,
         params,
@@ -157,3 +157,7 @@ def trace_cycle(
         resolution=resolution,
         show_progress=show_progress,
     )
+
+    ret = [(y, p, info) for y, p, info in _ret if info is not None]
+
+    return ret

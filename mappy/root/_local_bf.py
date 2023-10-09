@@ -19,19 +19,18 @@ VAR_LBF = TypeVar("VAR_LBF", bound=numpy.ndarray)
 
 
 def _cond_local_bf(
-    pmap: Callable[[numpy.ndarray, P | None, int], DiffeomorphismResult],
+    pmap: Callable[[numpy.ndarray, P | None], DiffeomorphismResult],
     var: VAR_LBF,
     params: P,
     param_key: str,
     dimension: int,
-    period: int = 1,
 ) -> VAR_LBF:
     y0 = var[0:dimension]
     param, theta = var[dimension:]
     inparams = params.copy()
     inparams[param_key] = param
 
-    res = pmap(y0, inparams, period)
+    res = pmap(y0, inparams)
     det = numpy.linalg.det(res.jac - numpy.exp(1j * theta) * numpy.eye(dimension))
 
     ret = numpy.empty(
@@ -68,21 +67,14 @@ def find_local_bf(
     period: int = 1,
     m0: str | None = None,
 ) -> FindLocalBfResult[Y]:
-    if isinstance(diff, PoincareMap):
-        if m0 is None:
-            raise ValueError("m0 must be specified for PoincareMap")
-        f = lambda y, p, n: diff.image_detail(y, m0, p, n)
-        dim = diff.dimension(m0)
-    else:
-        f = lambda y, p, n: diff.image_detail(y, p, n)
-        dim = diff.dimension()
+    f = lambda y, p: diff.image_detail(y0=y, params=p, iterations=period, m0=m0)
+    dim = diff.dimension(m0=m0)
 
     objective_fun = lambda y: _cond_local_bf(
         pmap=f,
         var=y,
         params=params,
         param_key=param_key,
-        period=period,
         dimension=dim,
     )
 
@@ -99,7 +91,7 @@ def find_local_bf(
         param1, theta1 = rt.x[dim:]
         inparams[param_key] = param1
 
-        jac = f(_y1, inparams, period).jac
+        jac = f(_y1, inparams).jac
 
         if jac is not None:
             if isinstance(jac, numpy.ndarray):
@@ -141,12 +133,12 @@ def trace_local_bf(
     period: int = 1,
     show_progress: bool = False,
     m0: str | None = None,
-) -> list[tuple[tuple[numpy.ndarray, float], P, dict[str, Any] | None]]:
+) -> list[tuple[numpy.ndarray, P, dict[str, Any]]]:
     if bf_param_key == cnt_param_key:
         raise ParameterKeyError
 
-    def lamb(y: tuple[numpy.ndarray, float], p: P | None):
-        y00, theta0 = y
+    def lamb(y: numpy.ndarray, p: P | None):
+        y00, theta0 = y[:-1], y[-1]
         if p is None:
             raise ValueError("Parameter is None but considering bifurcation problem.")
         ret = find_local_bf(diff, y00, p, bf_param_key, theta0, period, m0=m0)
@@ -154,7 +146,7 @@ def trace_local_bf(
         if ret.success:
             if ret.y is None or ret.theta is None:
                 raise TypeError(ret.y, ret.theta)
-            y1 = (ret.y, ret.theta)
+            y1 = numpy.append(ret.y, ret.theta)
         p1 = ret.params
         if not is_type_of(p1, type(p)):
             raise TypeError
@@ -172,12 +164,16 @@ def trace_local_bf(
         )
 
     _y0 = convert_y_ndarray(y0)
-    return continuation(
+    _ret = continuation(
         lamb,
-        (_y0, theta),
+        numpy.append(_y0, theta),
         params,
         end_val,
         param_key=cnt_param_key,
         resolution=resolution,
         show_progress=show_progress,
     )
+
+    ret = [(y, p, info) for y, p, info in _ret if info is not None]
+
+    return ret

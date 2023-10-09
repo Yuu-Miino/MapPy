@@ -974,7 +974,7 @@ class Diffeomorphism(Generic[Y]):
     def __init__(self, name: str, fun: Callable):
         self.dm = DiscreteMode(name, fun, inTraj=True)
 
-    def dimension(self):
+    def dimension(self, **kwargs):
         return self.dm.fun.dom_dim
 
     def image_detail(
@@ -984,6 +984,7 @@ class Diffeomorphism(Generic[Y]):
         iterations: int = 1,
         calc_jac: bool = True,
         calc_hes: bool = True,
+        **kwargs,
     ) -> DiffeomorphismResult[Y]:
         if iterations < 1:
             raise ValueError("iterations must be greater than or equal to 1.")
@@ -1061,7 +1062,10 @@ class PoincareMap(Diffeomorphism, Generic[Y]):
         self.options = options
         self.m1 = m1
 
-    def dimension(self, m0: str):
+    def dimension(self, m0: str | None = None, **kwargs):
+        if m0 is None:
+            raise ValueError("m0 must be specified for Poincare map.")
+
         if m0 not in [_m.name for _m in self.all_modes]:
             raise ValueError(f"{m0} is not in all_modes.")
         return self.all_modes[[_m.name for _m in self.all_modes].index(m0)].fun.dom_dim
@@ -1069,7 +1073,7 @@ class PoincareMap(Diffeomorphism, Generic[Y]):
     def image_detail(
         self,
         y0: Y,
-        m0: str,
+        m0: str | None = None,
         params: P | None = None,
         iterations: int = 1,
         calc_jac: bool = True,
@@ -1089,6 +1093,9 @@ class PoincareMap(Diffeomorphism, Generic[Y]):
         SolveIvbmpResult
             Result of calculation.
         """
+        if m0 is None:
+            raise ValueError("m0 must be specified for PoincareMap.")
+
         slv = solve_poincare_map(
             y0,
             self.all_modes,
